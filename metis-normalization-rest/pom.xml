@@ -7,7 +7,7 @@
     <artifactId>metis-normalization</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
-  <artifactId>normalization-rest</artifactId>
+  <artifactId>metis-normalization-rest</artifactId>
   <packaging>war</packaging>
 
   <properties>
@@ -38,17 +38,17 @@
   <dependencies>
     <dependency>
       <groupId>eu.europeana.metis</groupId>
-      <artifactId>normalization-lib</artifactId>
+      <artifactId>metis-normalization-lib</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>eu.europeana.metis</groupId>
-      <artifactId>normalization-cleaning-lib</artifactId>
+      <artifactId>metis-normalization-cleaning-lib</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>eu.europeana.metis</groupId>
-      <artifactId>normalization-language-lib</artifactId>
+      <artifactId>metis-normalization-language-lib</artifactId>
       <version>1.0-SNAPSHOT</version>
     </dependency>
 
