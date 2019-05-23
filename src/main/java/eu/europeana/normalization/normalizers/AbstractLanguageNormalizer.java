@@ -1,21 +1,18 @@
 package eu.europeana.normalization.normalizers;
 
+import eu.europeana.normalization.languages.LanguageMatch;
+import eu.europeana.normalization.languages.LanguageMatch.Type;
+import eu.europeana.normalization.languages.LanguageMatcher;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import eu.europeana.normalization.languages.LanguageMatch;
-import eu.europeana.normalization.languages.LanguageMatch.Type;
-import eu.europeana.normalization.languages.LanguageMatcher;
-import eu.europeana.normalization.settings.LanguageElement;
-import eu.europeana.normalization.util.XpathQuery;
 
 /**
- * This normalizer normalizes language references. It uses the functionality in
- * {@link LanguageMatcher}.
+ * This normalizer normalizes language references. It uses the functionality in {@link
+ * LanguageMatcher}.
  */
-public class LanguageReferenceNormalizer implements ValueNormalizeAction {
+public abstract class AbstractLanguageNormalizer implements ValueNormalizeAction {
 
   protected static final float CONFIDENCE_SINGLE_CODE_EQUALS = 1.0F;
   protected static final float CONFIDENCE_SINGLE_CODE_KNOWN = 0.98F;
@@ -24,20 +21,15 @@ public class LanguageReferenceNormalizer implements ValueNormalizeAction {
 
   private final float minimumConfidence;
   private final LanguageMatcher matcher;
-  private final XpathQuery elementsToNormalize;
 
   /**
    * Constructor.
-   * 
+   *
    * @param languageMatcher A language matcher.
    * @param minimumConfidence The minimum confidence to apply to normalizations.
-   * @param elementsToNormalize The elements to normalize.
    */
-  public LanguageReferenceNormalizer(LanguageMatcher languageMatcher, float minimumConfidence,
-      LanguageElement[] elementsToNormalize) {
+  AbstractLanguageNormalizer(LanguageMatcher languageMatcher, float minimumConfidence) {
     this.matcher = languageMatcher;
-    this.elementsToNormalize = XpathQuery.combine(Stream.of(elementsToNormalize)
-        .map(LanguageElement::getElementQuery).toArray(XpathQuery[]::new));
     this.minimumConfidence = minimumConfidence;
   }
 
@@ -61,7 +53,7 @@ public class LanguageReferenceNormalizer implements ValueNormalizeAction {
 
   /**
    * Determine the confidence in a match result.
-   * 
+   *
    * @param matches The match result of a given input string.
    * @return The confidence in the match. Or null if matching did not succeed.
    */
@@ -73,8 +65,8 @@ public class LanguageReferenceNormalizer implements ValueNormalizeAction {
     }
 
     // Do some analysis.
-    final Set<Type> matchTypes =
-        matches.stream().map(LanguageMatch::getType).distinct().collect(Collectors.toSet());
+    final Set<Type> matchTypes = matches.stream().map(LanguageMatch::getType)
+        .collect(Collectors.toSet());
     final boolean justCodeMatches = matchTypes.size() == 1 && matchTypes.contains(Type.CODE_MATCH);
     final boolean justLabelMatches =
         matchTypes.size() == 1 && matchTypes.contains(Type.LABEL_MATCH);
@@ -100,11 +92,5 @@ public class LanguageReferenceNormalizer implements ValueNormalizeAction {
 
     // Done
     return confidence;
-  }
-
-
-  @Override
-  public RecordNormalizeAction getAsRecordNormalizer() {
-    return new ValueNormalizeActionWrapper(this, elementsToNormalize);
   }
 }
