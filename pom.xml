@@ -8,7 +8,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <version.metis-schema>9-SNAPSHOT</version.metis-schema>
+    <version.metis-schema>10-SNAPSHOT</version.metis-schema>
     <version.mockito.core>4.3.1</version.mockito.core>
     <version.log4j>2.17.1</version.log4j>
     <version.ibm.icu4j>69.1</version.ibm.icu4j>
