@@ -28,6 +28,8 @@ class DcmiPeriodDateExtractorTest implements DateExtractorTest {
 
   private static Stream<Arguments> extractData() {
     return Stream.of(
+
+    of("name=Middle Jurassic; start=-174100000; end=-163500000", null, null),
         of("name=The Great Depression; start=1929; end=1939;", "1929/1939", "The Great Depression"),
         of("name=Haagse International Arts Festival, 2000; start=2000-01-26; end=2000-02-20;",
             "2000-01-26/2000-02-20", "Haagse International Arts Festival, 2000"),
