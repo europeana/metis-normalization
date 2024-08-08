@@ -16,8 +16,8 @@ import java.util.Objects;
 public class NormalizerSettings {
 
   protected static final float DEFAULT_MINIMUM_CONFIDENCE = 0.95F;
-  protected static final List<LanguagesVocabulary> DEFAULT_DC_LANGUAGE_TARGET_VOCABULARIES = Collections
-      .singletonList(LanguagesVocabulary.ISO_639_3);
+  protected static final List<LanguagesVocabulary> DEFAULT_DC_LANGUAGE_TARGET_VOCABULARIES = Arrays
+      .asList(LanguagesVocabulary.ISO_639_1, LanguagesVocabulary.ISO_639_3);
   protected static final List<LanguagesVocabulary> DEFAULT_XML_LANG_TARGET_VOCABULARIES = Arrays
       .asList(LanguagesVocabulary.ISO_639_1, LanguagesVocabulary.ISO_639_3);
   protected static final int DEFAULT_MIN_LANGUAGE_LABEL_LENGTH = 4;
