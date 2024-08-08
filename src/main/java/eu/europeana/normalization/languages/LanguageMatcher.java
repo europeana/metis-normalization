@@ -15,10 +15,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * Provides the matching algorithms for matching dc:language values with codes and labels in the
- * Languages NAL
- *
- * @author Nuno Freire (nfreire@gmail.com)
+ * Provides the matching algorithms for matching language values with codes and labels in the
+ * Languages NAL.
  */
 public class LanguageMatcher {
 
