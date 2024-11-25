@@ -21,7 +21,7 @@ public enum LanguagesVocabulary {
   /** ISO 639-3 codes. **/
   ISO_639_3(Language::getIso6393),
 
-  /** EU language name authority code. See https://open-data.europa.eu/en/data/dataset/language. **/
+  /** EU language name authority code. **/
   LANGUAGES_NAL(Language::getAuthorityCode);
 
   private final Function<Language, String> codeRetriever;

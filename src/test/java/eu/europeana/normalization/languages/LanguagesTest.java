@@ -23,7 +23,7 @@ class LanguagesTest {
 
     // Find Dutch - a language with lots of information.
     final List<Language> dutchList = languages.getActiveLanguages().stream()
-        .filter(language -> language.getAuthorityCode().equals("NLD")).collect(Collectors.toList());
+        .filter(language -> language.getAuthorityCode().equals("NLD")).toList();
     assertEquals(1, dutchList.size());
     final Language dutch = dutchList.get(0);
 
