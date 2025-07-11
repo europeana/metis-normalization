@@ -24,7 +24,7 @@
     <version.maven.release.plugin>2.5.3</version.maven.release.plugin>
 
     <!--Internal-->
-    <version.metis-schema>10-SNAPSHOT</version.metis-schema>
+    <version.metis-schema>11-SNAPSHOT</version.metis-schema>
 
     <!--External-->
     <version.mockito.core>4.3.1</version.mockito.core>
