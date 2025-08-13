@@ -65,7 +65,8 @@ public final class PidSchemeVocabulary {
    * @return A PID matcher.
    * @throws NormalizationConfigurationException If the vocabulary could not be loaded.
    */
-  public Function<String, PidMatchResult> getMatcher() throws NormalizationConfigurationException {
+  public static Function<String, PidMatchResult> getMatcher()
+      throws NormalizationConfigurationException {
     return getPidSchemes()::matchPid;
   }
 
