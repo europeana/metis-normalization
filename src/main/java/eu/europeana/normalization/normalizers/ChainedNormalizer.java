@@ -1,11 +1,12 @@
 package eu.europeana.normalization.normalizers;
 
 import eu.europeana.normalization.model.NormalizationReport;
+import eu.europeana.normalization.model.NormalizeActionResult;
+import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.util.NormalizationException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.w3c.dom.Document;
 
 /**
  * This class represents a normalizer with concatenated normalizer subtasks. This normalizer accepts
@@ -26,11 +27,14 @@ public class ChainedNormalizer implements RecordNormalizeAction {
   }
 
   @Override
-  public NormalizationReport normalize(Document edm) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper record) throws NormalizationException {
     final NormalizationReport report = new NormalizationReport();
-    for (RecordNormalizeAction normOp : normalizations) {
-      report.mergeWith(normOp.normalize(edm));
+    RecordWrapper currentRecord = record;
+    for (RecordNormalizeAction action : normalizations) {
+      final NormalizeActionResult actionResult = action.normalize(currentRecord);
+      currentRecord = actionResult.record();
+      report.mergeWith(actionResult.report());
     }
-    return report;
+    return new NormalizeActionResult(currentRecord, report);
   }
 }

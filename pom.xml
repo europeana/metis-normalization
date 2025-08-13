@@ -44,7 +44,6 @@
       <groupId>eu.europeana.metis</groupId>
       <artifactId>metis-schema</artifactId>
       <version>${version.metis-schema}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>

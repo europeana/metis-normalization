@@ -29,7 +29,8 @@ import eu.europeana.normalization.dates.sanitize.DateFieldSanitizer;
 import eu.europeana.normalization.dates.sanitize.SanitizeOperation;
 import eu.europeana.normalization.dates.sanitize.SanitizedDate;
 import eu.europeana.normalization.model.ConfidenceLevel;
-import eu.europeana.normalization.model.NormalizationReport;
+import eu.europeana.normalization.model.NormalizeActionResult;
+import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.util.Namespace;
 import eu.europeana.normalization.util.NormalizationException;
 import eu.europeana.normalization.util.XmlUtil;
@@ -173,16 +174,19 @@ public class DatesNormalizer implements RecordNormalizeAction {
   }
 
   @Override
-  public NormalizationReport normalize(Document document) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper record) throws NormalizationException {
 
     // Find the Europeana proxy.
+    final Document document = record.getAsDocument();
     final Element europeanaProxy = XmlUtil.getUniqueElement(EUROPEANA_PROXY, document);
 
     // Perform the two different kinds of normalizations
     final InternalNormalizationReport report = new InternalNormalizationReport();
     report.mergeWith(normalizeElements(document, europeanaProxy, DATE_PROPERTY_FIELDS, this::normalizeDateProperty));
     report.mergeWith(normalizeElements(document, europeanaProxy, GENERIC_PROPERTY_FIELDS, this::normalizeGenericProperty));
-    return report;
+
+    // Done.
+    return new NormalizeActionResult(RecordWrapper.create(document), report);
   }
 
   private InternalNormalizationReport normalizeElements(Document document, Element europeanaProxy,

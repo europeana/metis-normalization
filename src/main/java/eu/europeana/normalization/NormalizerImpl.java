@@ -1,16 +1,17 @@
 package eu.europeana.normalization;
 
 import eu.europeana.normalization.model.NormalizationBatchResult;
-import eu.europeana.normalization.model.NormalizationReport;
 import eu.europeana.normalization.model.NormalizationResult;
+import eu.europeana.normalization.model.NormalizeActionResult;
+import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.normalizers.RecordNormalizeAction;
 import eu.europeana.normalization.util.NormalizationException;
 import eu.europeana.normalization.util.XmlException;
 import eu.europeana.normalization.util.XmlUtil;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
 import java.lang.invoke.MethodHandles;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -62,14 +63,8 @@ class NormalizerImpl implements Normalizer {
 
     // Perform the normalization.
     try {
-      final Document recordDom = XmlUtil.parseDom(new StringReader(edmRecord));
-      final NormalizationReport report = recordNormalizer.normalize(recordDom);
-      final String resultRecord = XmlUtil.writeDomToString(recordDom);
-      return NormalizationResult.createInstanceForSuccess(resultRecord, report);
-    } catch (XmlException e) {
-      LOGGER.warn("Parsing of xml exception", e);
-      return NormalizationResult.createInstanceForError("Error parsing XML: " + e.getMessage(),
-          edmRecord);
+      final NormalizeActionResult result = recordNormalizer.normalize(RecordWrapper.create(edmRecord));
+      return NormalizationResult.createInstanceForSuccess(result.record().getAsString(), result.report());
     } catch (RuntimeException e) {
       LOGGER.error("Unexpected runtime exception", e);
       return NormalizationResult.createInstanceForError("Unexpected problem: " + e.getMessage(),
@@ -88,8 +83,8 @@ class NormalizerImpl implements Normalizer {
     // Perform the normalization.
     try {
       final Document recordDom = XmlUtil.parseDom(new InputStreamReader(edmRecord));
-      recordNormalizer.normalize(recordDom);
-      return XmlUtil.writeDomToByteArray(recordDom);
+      final NormalizeActionResult result = recordNormalizer.normalize(RecordWrapper.create(recordDom));
+      return result.record().getAsString().getBytes(StandardCharsets.UTF_8);
     } catch (XmlException e) {
       throw new NormalizationException("Error parsing XML: " + e.getMessage(), e);
     } catch (RuntimeException e) {
