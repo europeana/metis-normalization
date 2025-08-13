@@ -174,10 +174,10 @@ public class DatesNormalizer implements RecordNormalizeAction {
   }
 
   @Override
-  public NormalizeActionResult normalize(RecordWrapper record) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException {
 
     // Find the Europeana proxy.
-    final Document document = record.getAsDocument();
+    final Document document = edmRecord.getAsDocument();
     final Element europeanaProxy = XmlUtil.getUniqueElement(EUROPEANA_PROXY, document);
 
     // Perform the two different kinds of normalizations

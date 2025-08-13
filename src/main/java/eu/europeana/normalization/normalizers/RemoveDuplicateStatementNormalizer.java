@@ -87,10 +87,10 @@ public class RemoveDuplicateStatementNormalizer implements RecordNormalizeAction
   }
 
   @Override
-  public NormalizeActionResult normalize(RecordWrapper record) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException {
 
     // Create the new report.
-    final Document edm = record.getAsDocument();
+    final Document edm = edmRecord.getAsDocument();
     final InternalNormalizationReport report = new InternalNormalizationReport();
 
     // Allocate lists here and clear in the loop: for performance reasons.
@@ -129,7 +129,7 @@ public class RemoveDuplicateStatementNormalizer implements RecordNormalizeAction
     }
 
     // Return report.
-    return new NormalizeActionResult(record, report);
+    return new NormalizeActionResult(RecordWrapper.create(edm), report);
   }
 
   /**

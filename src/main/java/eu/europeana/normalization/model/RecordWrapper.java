@@ -49,24 +49,24 @@ public interface RecordWrapper {
   /**
    * Create an instance based on a string record.
    *
-   * @param record The record as String.
+   * @param edmRecord The record as String.
    * @return An instance.
    */
-  static RecordWrapper create(String record) {
+  static RecordWrapper create(String edmRecord) {
     return new RecordWrapper() {
       @Override
       public String getAsString() {
-        return record;
+        return edmRecord;
       }
 
       @Override
       public Document getAsDocument() throws NormalizationException {
-        return RecordWrapper.stringToDocument(record);
+        return stringToDocument(edmRecord);
       }
 
       @Override
       public RDF getAsRDF() throws NormalizationException {
-        return RecordWrapper.stringToRdf(record);
+        return stringToRdf(edmRecord);
       }
     };
   }
@@ -74,24 +74,24 @@ public interface RecordWrapper {
   /**
    * Create an instance based on a Document.
    *
-   * @param record The record as Document.
+   * @param edmRecord The record as Document.
    * @return An instance.
    */
-  static RecordWrapper create(Document record) {
+  static RecordWrapper create(Document edmRecord) {
     return new RecordWrapper() {
       @Override
       public String getAsString() throws NormalizationException {
-        return RecordWrapper.documentToString(record);
+        return documentToString(edmRecord);
       }
 
       @Override
       public Document getAsDocument() {
-        return record;
+        return edmRecord;
       }
 
       @Override
       public RDF getAsRDF() throws NormalizationException {
-        return RecordWrapper.stringToRdf(RecordWrapper.documentToString(record));
+        return stringToRdf(documentToString(edmRecord));
       }
     };
   }
@@ -99,56 +99,84 @@ public interface RecordWrapper {
   /**
    * Create an instance based on an RDF.
    *
-   * @param record The record as RDF.
+   * @param edmRecord The record as RDF.
    * @return An instance.
    */
-  static RecordWrapper create(RDF record) {
+  static RecordWrapper create(RDF edmRecord) {
     return new RecordWrapper() {
 
       @Override
       public String getAsString() throws NormalizationException {
-        return RecordWrapper.rdfToString(record);
+        return rdfToString(edmRecord);
       }
 
       @Override
       public Document getAsDocument() throws NormalizationException {
-        return RecordWrapper.stringToDocument(RecordWrapper.rdfToString(record));
+        return stringToDocument(rdfToString(edmRecord));
       }
 
       @Override
       public RDF getAsRDF() {
-        return record;
+        return edmRecord;
       }
     };
   }
 
-  private static Document stringToDocument(String record) throws NormalizationException {
+  /**
+   * Convert a String to a Document.
+   *
+   * @param edmRecord The record to convert.
+   * @return The converted record.
+   * @throws NormalizationException In case there were conversion issues.
+   */
+  private static Document stringToDocument(String edmRecord) throws NormalizationException {
     try {
-      return XmlUtil.parseDom(new StringReader(record));
+      return XmlUtil.parseDom(new StringReader(edmRecord));
     } catch (XmlException | RuntimeException e) {
       throw new NormalizationException("Issue converting record String to Document", e);
     }
   }
 
-  private static String documentToString(Document record) throws NormalizationException {
+  /**
+   * Convert a Document to a String.
+   *
+   * @param edmRecord The record to convert.
+   * @return The converted record.
+   * @throws NormalizationException In case there were conversion issues.
+   */
+  private static String documentToString(Document edmRecord) throws NormalizationException {
     try {
-      return XmlUtil.writeDomToString(record);
+      return XmlUtil.writeDomToString(edmRecord);
     } catch (XmlException | RuntimeException e) {
       throw new NormalizationException("Issue converting record Document to String", e);
     }
   }
 
-  private static RDF stringToRdf(String record) throws NormalizationException {
+  /**
+   * Convert a String to an RDF.
+   *
+   * @param edmRecord The record to convert.
+   * @return The converted record.
+   * @throws NormalizationException In case there were conversion issues.
+   */
+  private static RDF stringToRdf(String edmRecord) throws NormalizationException {
     try {
-      return new RdfConversionUtils().convertStringToRdf(record);
+      return new RdfConversionUtils().convertStringToRdf(edmRecord);
     } catch (SerializationException | RuntimeException e) {
       throw new NormalizationException("Issue converting record String to RDF", e);
     }
   }
 
-  private static String rdfToString(RDF record) throws NormalizationException {
+  /**
+   * Convert an RDF to a String.
+   *
+   * @param edmRecord The record to convert.
+   * @return The converted record.
+   * @throws NormalizationException In case there were conversion issues.
+   */
+  private static String rdfToString(RDF edmRecord) throws NormalizationException {
     try {
-      return new RdfConversionUtils().convertRdfToString(record);
+      return new RdfConversionUtils().convertRdfToString(edmRecord);
     } catch (SerializationException | RuntimeException e) {
       throw new NormalizationException("Issue converting record RDF to String", e);
     }

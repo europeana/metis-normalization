@@ -27,12 +27,12 @@ public class ChainedNormalizer implements RecordNormalizeAction {
   }
 
   @Override
-  public NormalizeActionResult normalize(RecordWrapper record) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException {
     final NormalizationReport report = new NormalizationReport();
-    RecordWrapper currentRecord = record;
+    RecordWrapper currentRecord = edmRecord;
     for (RecordNormalizeAction action : normalizations) {
       final NormalizeActionResult actionResult = action.normalize(currentRecord);
-      currentRecord = actionResult.record();
+      currentRecord = actionResult.edmRecord();
       report.mergeWith(actionResult.report());
     }
     return new NormalizeActionResult(currentRecord, report);

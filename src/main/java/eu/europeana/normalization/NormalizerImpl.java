@@ -64,7 +64,7 @@ class NormalizerImpl implements Normalizer {
     // Perform the normalization.
     try {
       final NormalizeActionResult result = recordNormalizer.normalize(RecordWrapper.create(edmRecord));
-      return NormalizationResult.createInstanceForSuccess(result.record().getAsString(), result.report());
+      return NormalizationResult.createInstanceForSuccess(result.edmRecord().getAsString(), result.report());
     } catch (RuntimeException e) {
       LOGGER.error("Unexpected runtime exception", e);
       return NormalizationResult.createInstanceForError("Unexpected problem: " + e.getMessage(),
@@ -84,7 +84,7 @@ class NormalizerImpl implements Normalizer {
     try {
       final Document recordDom = XmlUtil.parseDom(new InputStreamReader(edmRecord));
       final NormalizeActionResult result = recordNormalizer.normalize(RecordWrapper.create(recordDom));
-      return result.record().getAsString().getBytes(StandardCharsets.UTF_8);
+      return result.edmRecord().getAsString().getBytes(StandardCharsets.UTF_8);
     } catch (XmlException e) {
       throw new NormalizationException("Error parsing XML: " + e.getMessage(), e);
     } catch (RuntimeException e) {

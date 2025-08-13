@@ -163,10 +163,10 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
   }
 
   @Override
-  public NormalizeActionResult normalize(RecordWrapper record) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException {
 
     // Create the report and analyze the copy settings
-    final Document edm = record.getAsDocument();
+    final Document edm = edmRecord.getAsDocument();
     final InternalNormalizationReport report = new InternalNormalizationReport();
     final Element copyTarget =
         copySettings == null ? null : getCopyTargetFromSettings(edm, copySettings);
@@ -204,7 +204,7 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
     }
 
     // Done: return the result.
-    return new NormalizeActionResult(record, report);
+    return new NormalizeActionResult(RecordWrapper.create(edm), report);
   }
 
   private static Element getCopyTargetFromSettings(Document edm, CopySettings copySettings)

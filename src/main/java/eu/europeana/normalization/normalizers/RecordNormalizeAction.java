@@ -13,12 +13,13 @@ public interface RecordNormalizeAction extends NormalizeAction {
   /**
    * This method performs the normalize action.
    *
-   * @param record The record to normalize. This wrapper should be considered outdated after
-   *               this method is called, and the one in the return object should be used.
-   * @return An object containing the normalized record and a report on the actions of this normalizer.
+   * @param edmRecord The record to normalize. This wrapper should be considered outdated after this
+   *                  method is called, and the one in the return object should be used.
+   * @return An object containing the normalized record and a report on the actions of this
+   * normalizer.
    * @throws NormalizationException If something goes wrong during normalization.
    */
-  NormalizeActionResult normalize(RecordWrapper record) throws NormalizationException;
+  NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException;
 
   /**
    * Default behavior: return the current instance.
