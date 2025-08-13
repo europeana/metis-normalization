@@ -8,7 +8,7 @@ package eu.europeana.normalization.pids;
  * @param resolvablePid The resolvable version of the PID.
  * @param originalPid   The original version of the PID.
  */
-public record PidMatchResult(PidScheme scheme, String canonicalPid, String resolvablePid,
+public record PidMatchResult(PidSchemeInfo scheme, String canonicalPid, String resolvablePid,
                              String originalPid) {
 
 }

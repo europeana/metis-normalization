@@ -6,6 +6,9 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * This represents a list of persistent identifier schemes as it is modeled in the vocabulary file.
+ */
 @JacksonXmlRootElement(namespace = PersistentIdentifierSchemes.RDF_NAMESPACE, localName = "RDF")
 public class PersistentIdentifierSchemes {
 

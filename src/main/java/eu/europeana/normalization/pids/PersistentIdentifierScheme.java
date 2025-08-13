@@ -4,6 +4,9 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import java.util.Set;
 
+/**
+ * This represents a persistent identifier scheme as it is modeled in the vocabulary file.
+ */
 public class PersistentIdentifierScheme {
 
   private static final String DCTERMS_NAMESPACE = "http://purl.org/dc/terms/";

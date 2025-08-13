@@ -15,7 +15,7 @@ import org.apache.commons.io.IOUtils;
 /**
  * This class loads a PID scheme vocabulary and provides functionality to match PIDs against it.
  */
-public class PidSchemeVocabulary {
+public final class PidSchemeVocabulary {
 
   private static PidSchemeVocabulary instance;
 

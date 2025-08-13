@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 /**
  * This class represents a PID scheme that can be matched against.
  */
-public class PidScheme implements Comparable<PidScheme> {
+public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
 
   private final String schemeId;
   private final Set<Pattern> matchingPatterns = new HashSet<>();
@@ -21,10 +21,16 @@ public class PidScheme implements Comparable<PidScheme> {
   private final String seeAlso;
   private final String organization;
 
+  /**
+   * Constructor.
+   *
+   * @param loadedScheme The scheme as it is represented in the vocabulary file.
+   */
   public PidScheme(PersistentIdentifierScheme loadedScheme) {
     this.schemeId = loadedScheme.getAbout();
     Optional.ofNullable(loadedScheme.getMatchingPatterns()).stream().flatMap(Collection::stream)
-        .forEach(pattern -> this.matchingPatterns.add(Pattern.compile(pattern, Pattern.CASE_INSENSITIVE)));
+        .forEach(pattern -> this.matchingPatterns.add(
+            Pattern.compile(pattern, Pattern.CASE_INSENSITIVE)));
     this.canonicalPattern = loadedScheme.getCanonicalPattern();
     this.resolvablePattern = loadedScheme.getResolvablePattern();
     this.title = loadedScheme.getTitle();
@@ -86,19 +92,23 @@ public class PidScheme implements Comparable<PidScheme> {
   public int compareTo(PidScheme o) {
     return schemeId.compareTo(o.schemeId);
   }
-  
+
+  @Override
   public String getSchemeId() {
     return schemeId;
   }
 
+  @Override
   public String getSeeAlso() {
     return seeAlso;
   }
 
+  @Override
   public String getTitle() {
     return title;
   }
 
+  @Override
   public String getOrganization() {
     return organization;
   }
