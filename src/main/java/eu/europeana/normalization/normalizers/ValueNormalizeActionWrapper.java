@@ -1,7 +1,8 @@
 package eu.europeana.normalization.normalizers;
 
 import eu.europeana.normalization.model.ConfidenceLevel;
-import eu.europeana.normalization.model.NormalizationReport;
+import eu.europeana.normalization.model.NormalizeActionResult;
+import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.util.Namespace;
 import eu.europeana.normalization.util.NormalizationException;
 import eu.europeana.normalization.util.XmlUtil;
@@ -162,9 +163,10 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
   }
 
   @Override
-  public NormalizationReport normalize(Document edm) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException {
 
     // Create the report and analyze the copy settings
+    final Document edm = edmRecord.getAsDocument();
     final InternalNormalizationReport report = new InternalNormalizationReport();
     final Element copyTarget =
         copySettings == null ? null : getCopyTargetFromSettings(edm, copySettings);
@@ -201,8 +203,8 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
       }
     }
 
-    // Done: return the report.
-    return report;
+    // Done: return the result.
+    return new NormalizeActionResult(RecordWrapper.create(edm), report);
   }
 
   private static Element getCopyTargetFromSettings(Document edm, CopySettings copySettings)

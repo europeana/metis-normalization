@@ -44,7 +44,6 @@
       <groupId>eu.europeana.metis</groupId>
       <artifactId>metis-schema</artifactId>
       <version>${version.metis-schema}</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -89,6 +88,11 @@
       <artifactId>junit-jupiter-params</artifactId>
       <version>${version.junit}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-xml</artifactId>
+      <version>${version.jackson}</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

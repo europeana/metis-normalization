@@ -1,7 +1,7 @@
 package eu.europeana.normalization.normalizers;
 
-import org.w3c.dom.Document;
-import eu.europeana.normalization.model.NormalizationReport;
+import eu.europeana.normalization.model.NormalizeActionResult;
+import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.util.NormalizationException;
 
 /**
@@ -12,12 +12,14 @@ public interface RecordNormalizeAction extends NormalizeAction {
 
   /**
    * This method performs the normalize action.
-   * 
-   * @param edm The EDM document to normalize. Changes will be made directly in this document.
-   * @return A report on the actions of this normalizer.
-   * @throws NormalizationException In case something goes wrong during normalization.
+   *
+   * @param edmRecord The record to normalize. This wrapper should be considered outdated after this
+   *                  method is called, and the one in the return object should be used.
+   * @return An object containing the normalized record and a report on the actions of this
+   * normalizer.
+   * @throws NormalizationException If something goes wrong during normalization.
    */
-  NormalizationReport normalize(Document edm) throws NormalizationException;
+  NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException;
 
   /**
    * Default behavior: return the current instance.

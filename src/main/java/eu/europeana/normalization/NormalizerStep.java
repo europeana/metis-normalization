@@ -7,6 +7,7 @@ import eu.europeana.normalization.normalizers.CleanSpaceCharactersNormalizer;
 import eu.europeana.normalization.normalizers.DatesNormalizer;
 import eu.europeana.normalization.normalizers.DcLanguageNormalizer;
 import eu.europeana.normalization.normalizers.NormalizeAction;
+import eu.europeana.normalization.normalizers.PidNormalizer;
 import eu.europeana.normalization.normalizers.RemoveDuplicateStatementNormalizer;
 import eu.europeana.normalization.normalizers.XmlLangNormalizer;
 import eu.europeana.normalization.settings.NormalizerSettings;
@@ -62,7 +63,12 @@ public enum NormalizerStep {
         settings.getMinLanguageLabelLength(), settings.getLanguageAmbiguityHandling(),
         settings.getTargetXmlLangVocabularies());
     return new XmlLangNormalizer(languageMatcher, settings.getMinimumConfidence());
-  });
+  }),
+
+  /**
+   * Normalize PIDs. See {@link PidNormalizer}.
+   **/
+  NORMALIZE_PIDS(settings -> new PidNormalizer());
 
   private final ActionCreator actionCreator;
 

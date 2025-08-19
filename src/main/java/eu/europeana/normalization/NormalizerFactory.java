@@ -36,8 +36,9 @@ public class NormalizerFactory {
       // Third: remove duplicate statements (which may be caused by the operations above).
       NormalizerStep.REMOVE_DUPLICATE_STATEMENTS,
 
-      // Last: normalize dates (which may be affected by the operations above).
-      NormalizerStep.DATES_NORMALIZER
+      // Last: normalize dates and PIDs (which may be affected by the operations above).
+      NormalizerStep.DATES_NORMALIZER,
+      NormalizerStep.NORMALIZE_PIDS
   };
 
   /**
