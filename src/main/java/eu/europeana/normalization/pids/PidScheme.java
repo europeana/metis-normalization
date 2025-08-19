@@ -27,15 +27,33 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
    * @param loadedScheme The scheme as it is represented in the vocabulary file.
    */
   public PidScheme(PersistentIdentifierScheme loadedScheme) {
-    this.schemeId = loadedScheme.getAbout();
-    Optional.ofNullable(loadedScheme.getMatchingPatterns()).stream().flatMap(Collection::stream)
+    this(loadedScheme.getAbout(), loadedScheme.getMatchingPatterns(),
+        loadedScheme.getCanonicalPattern(), loadedScheme.getResolvablePattern(),
+        loadedScheme.getTitle(), loadedScheme.getSeeAlso(), loadedScheme.getMaintainer());
+  }
+
+  /**
+   * Constructor for test objects
+   *
+   * @param schemeId          The scheme ID
+   * @param matchingPatterns  The Matching patterns.
+   * @param canonicalPattern  The canonical pattern.
+   * @param resolvablePattern The resolvable pattern.
+   * @param title             The title.
+   * @param seeAlso           A See Also value.
+   * @param organization      The organisation.
+   */
+  PidScheme(String schemeId,Set<String> matchingPatterns , String canonicalPattern,
+      String resolvablePattern, String title, String seeAlso, String organization) {
+    this.schemeId = schemeId;
+    Optional.ofNullable(matchingPatterns).stream().flatMap(Collection::stream)
         .forEach(pattern -> this.matchingPatterns.add(
             Pattern.compile(pattern, Pattern.CASE_INSENSITIVE)));
-    this.canonicalPattern = loadedScheme.getCanonicalPattern();
-    this.resolvablePattern = loadedScheme.getResolvablePattern();
-    this.title = loadedScheme.getTitle();
-    this.seeAlso = loadedScheme.getSeeAlso();
-    this.organization = loadedScheme.getMaintainer();
+    this.canonicalPattern = canonicalPattern;
+    this.resolvablePattern = resolvablePattern;
+    this.title = title;
+    this.seeAlso = seeAlso;
+    this.organization = organization;
   }
 
   /**
