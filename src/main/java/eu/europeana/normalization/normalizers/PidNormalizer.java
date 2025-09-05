@@ -111,7 +111,8 @@ public class PidNormalizer implements RecordNormalizeAction {
 
     // Try to find a matching PID object.
     final Optional<PersistentIdentifierType> existingPid = normalizedPidsById.values().stream()
-        .filter(candidate -> candidate.getValue().getString().equals(normalization.canonicalPid()))
+        .filter(candidate -> Optional.ofNullable(candidate.getValue())
+            .map(LiteralType::getString).filter(normalization.canonicalPid()::equals).isPresent())
         .findAny();
 
     // If there is no matching PID object, create a new one and add it to the map.

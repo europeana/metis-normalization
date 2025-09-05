@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-public class PidSchemeTest {
+class PidSchemeTest {
 
   @Test
   void testHappyFlow() {
