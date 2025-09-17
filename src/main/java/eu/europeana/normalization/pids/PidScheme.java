@@ -80,7 +80,7 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
     }
     String result = this.canonicalPattern;
     for (int grp = 1; grp <= successfulMatcher.groupCount(); grp++) {
-      result = result.replace("$" + grp,
+      result = result.replace("${" + grp + "}",
           Optional.ofNullable(successfulMatcher.group(grp)).orElse(""));
     }
     return result;
@@ -99,7 +99,7 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
       return null;
     }
     final String resolvableForm = Optional.ofNullable(this.resolvablePattern)
-        .map(pattern -> pattern.replace("$0", canonicalForm)).orElse(trimmedPid);
+        .map(pattern -> pattern.replace("${0}", canonicalForm)).orElse(trimmedPid);
     return new PidMatchResult(this, canonicalForm, resolvableForm, trimmedPid);
   }
 

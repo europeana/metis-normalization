@@ -21,7 +21,7 @@ class PidSchemeTest {
         "https?://catalogue\\.bnf\\.fr/ark:(/?[0-9]+)(/[a-z0-9=~\\*\\+@_$%\\-]+)(/[a-z0-9=~\\*\\+@_$%\\-/\\.]+)?",
         "https?://n2t\\.net/ark:(/?[0-9]+)(/[a-z0-9=~\\*\\+@_$%\\-]+)(/[a-z0-9=~\\*\\+@_$%\\-/\\.]+)?",
         "ark:(/?[0-9]+)(/[a-z0-9=~\\*\\+@_$%\\-]+)(/[a-z0-9=~\\*\\+@_$%\\-/\\.]+)?"),
-        "ark:$1$2$3", "https://n2t.net/$0", schemeTitle, schemeSeeAlso, schemeOrganisation);
+        "ark:${1}${2}${3}", "https://n2t.net/${0}", schemeTitle, schemeSeeAlso, schemeOrganisation);
 
     final String unNormalizedPid = "https://ark.bnf.fr/ark:/12148/bpt6k279983";
 
