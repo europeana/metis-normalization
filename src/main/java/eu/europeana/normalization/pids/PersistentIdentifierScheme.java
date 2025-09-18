@@ -22,7 +22,7 @@ public class PersistentIdentifierScheme {
   private String title;
 
   @JacksonXmlProperty(namespace = RDFS_NAMESPACE, localName = "seeAlso")
-  private String seeAlso;
+  private Resource seeAlso;
 
   @JacksonXmlProperty(namespace = DOAP_NAMESPACE, localName = "maintainer")
   private String maintainer;
@@ -45,7 +45,7 @@ public class PersistentIdentifierScheme {
     return title;
   }
 
-  public String getSeeAlso() {
+  public Resource getSeeAlso() {
     return seeAlso;
   }
 
@@ -63,5 +63,15 @@ public class PersistentIdentifierScheme {
 
   public Set<String> getMatchingPatterns() {
     return matchingPatterns;
+  }
+
+  public static class Resource {
+
+    @JacksonXmlProperty(namespace = RDF_NAMESPACE, localName = "resource", isAttribute = true)
+    private String resource;
+
+    public String getResource() {
+      return resource;
+    }
   }
 }

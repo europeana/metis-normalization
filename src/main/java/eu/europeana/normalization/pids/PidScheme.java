@@ -1,5 +1,6 @@
 package eu.europeana.normalization.pids;
 
+import eu.europeana.normalization.pids.PersistentIdentifierScheme.Resource;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -29,7 +30,9 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
   public PidScheme(PersistentIdentifierScheme loadedScheme) {
     this(loadedScheme.getAbout(), loadedScheme.getMatchingPatterns(),
         loadedScheme.getCanonicalPattern(), loadedScheme.getResolvablePattern(),
-        loadedScheme.getTitle(), loadedScheme.getSeeAlso(), loadedScheme.getMaintainer());
+        loadedScheme.getTitle(),
+        Optional.ofNullable(loadedScheme.getSeeAlso()).map(Resource::getResource).orElse(null),
+        loadedScheme.getMaintainer());
   }
 
   /**
