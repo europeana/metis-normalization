@@ -1,5 +1,7 @@
 package eu.europeana.normalization.normalizers;
 
+import eu.europeana.normalization.model.NormalizeActionResult;
+import eu.europeana.normalization.model.RecordWrapper;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -16,7 +18,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import eu.europeana.normalization.model.ConfidenceLevel;
-import eu.europeana.normalization.model.NormalizationReport;
 import eu.europeana.normalization.util.Namespace;
 import eu.europeana.normalization.util.NormalizationException;
 import eu.europeana.normalization.util.XmlUtil;
@@ -86,9 +87,10 @@ public class RemoveDuplicateStatementNormalizer implements RecordNormalizeAction
   }
 
   @Override
-  public NormalizationReport normalize(Document edm) throws NormalizationException {
+  public NormalizeActionResult normalize(RecordWrapper edmRecord) throws NormalizationException {
 
     // Create the new report.
+    final Document edm = edmRecord.getAsDocument();
     final InternalNormalizationReport report = new InternalNormalizationReport();
 
     // Allocate lists here and clear in the loop: for performance reasons.
@@ -127,7 +129,7 @@ public class RemoveDuplicateStatementNormalizer implements RecordNormalizeAction
     }
 
     // Return report.
-    return report;
+    return new NormalizeActionResult(RecordWrapper.create(edm), report);
   }
 
   /**
