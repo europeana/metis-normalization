@@ -1,6 +1,5 @@
 package eu.europeana.normalization.pids;
 
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +10,7 @@ import java.util.function.Function;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.apache.commons.io.IOUtils;
+import tools.jackson.dataformat.xml.XmlMapper;
 
 /**
  * This class loads a PID scheme vocabulary and provides functionality to match PIDs against it.
