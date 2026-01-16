@@ -1,8 +1,8 @@
 package eu.europeana.normalization.pids;
 
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import java.util.Set;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 /**
  * This represents a persistent identifier scheme as it is modeled in the vocabulary file.
