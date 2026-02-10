@@ -28,7 +28,6 @@
 
     <!--External-->
     <version.spring.boot>4.0.1</version.spring.boot>
-    <version.log4j>2.23.0</version.log4j>
     <version.ibm.icu4j>69.1</version.ibm.icu4j>
     <version.commons.lang3>3.12.0</version.commons.lang3>
     <version.commons.io>2.9.0</version.commons.io>
@@ -59,11 +58,16 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-jackson</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-logging</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j2-impl</artifactId>
-      <version>${version.log4j}</version>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
     <dependency>
       <groupId>com.ibm.icu</groupId>
