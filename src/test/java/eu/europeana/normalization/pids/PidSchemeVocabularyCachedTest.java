@@ -510,7 +510,7 @@ class PidSchemeVocabularyCachedTest {
     }
 
     // Then, If we get here without OutOfMemory, test passes
-    assertTrue(true);
+    assertNotNull(vocabulary);
   }
 
   @Test

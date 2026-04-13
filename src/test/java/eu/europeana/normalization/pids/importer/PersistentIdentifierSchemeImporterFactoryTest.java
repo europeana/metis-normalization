@@ -31,7 +31,7 @@ class PersistentIdentifierSchemeImporterFactoryTest {
   void testCreateImporterWithURL() throws MalformedURLException {
     // Given
     PersistentIdentifierSchemeImporterFactory factory = new PersistentIdentifierSchemeImporterFactory();
-    URL testUrl = new URL("file:///test/path");
+    URL testUrl = URI.create("file:///test/path").toURL();
 
     // When
     PersistentIdentifierSchemeImporter importer = factory.createImporter(testUrl);
@@ -42,7 +42,7 @@ class PersistentIdentifierSchemeImporterFactoryTest {
   }
 
   /**
-   * Test create importer with path.
+   * Test create importer with a path.
    *
    * @param tempDir the temp dir
    */
@@ -104,7 +104,7 @@ class PersistentIdentifierSchemeImporterFactoryTest {
   @Test
   void testUrlLocationRead() throws Exception {
     // Given
-    URL testUrl = new URL("file:///dev/null");
+    URL testUrl = URI.create("file:///dev/null").toURL();
     PersistentIdentifierSchemeImporterFactory factory = new PersistentIdentifierSchemeImporterFactory();
     PersistentIdentifierSchemeImporter importer = factory.createImporter(testUrl);
     Location location = importer.getDirectoryLocation();
@@ -187,7 +187,7 @@ class PersistentIdentifierSchemeImporterFactoryTest {
   @Test
   void testUrlLocationResolveWithMalformedRelativePath() throws Exception {
     // Given
-    URL testUrl = new URL("file:///test/config.yaml");
+    URL testUrl = URI.create("file:///test/config.yaml").toURL();
     PersistentIdentifierSchemeImporterFactory factory = new PersistentIdentifierSchemeImporterFactory();
     PersistentIdentifierSchemeImporter importer = factory.createImporter(testUrl);
     Location location = importer.getDirectoryLocation();
@@ -205,7 +205,7 @@ class PersistentIdentifierSchemeImporterFactoryTest {
   @Test
   void testUrlLocationResolveRelativePath() throws Exception {
     // Given
-    URL testUrl = new URL("file:///base/config.yaml");
+    URL testUrl = URI.create("file:///base/config.yaml").toURL();
     PersistentIdentifierSchemeImporterFactory factory = new PersistentIdentifierSchemeImporterFactory();
     PersistentIdentifierSchemeImporter importer = factory.createImporter(testUrl);
     Location location = importer.getDirectoryLocation();
@@ -440,7 +440,7 @@ class PersistentIdentifierSchemeImporterFactoryTest {
   @Test
   void testUrlLocationResolvePreservesPath() throws Exception {
     // Given
-    URL testUrl = new URL("file:///base/dir/config.yaml");
+    URL testUrl =  URI.create("file:///base/dir/config.yaml").toURL();
     PersistentIdentifierSchemeImporterFactory factory = new PersistentIdentifierSchemeImporterFactory();
     PersistentIdentifierSchemeImporter importer = factory.createImporter(testUrl);
     Location location = importer.getDirectoryLocation();

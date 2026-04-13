@@ -16,6 +16,9 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.dataformat.xml.XmlMapper;
 import tools.jackson.dataformat.yaml.YAMLFactory;
 
+/**
+ * The type Persistent identifier scheme importer.
+ */
 public record PersistentIdentifierSchemeImporter(Location directoryLocation) implements PersistentIdentifierSchemeImportable {
 
   @Override
@@ -55,8 +58,15 @@ public record PersistentIdentifierSchemeImporter(Location directoryLocation) imp
     return directoryLocation;
   }
 
+  /**
+   * Load persistent identifier scheme pid scheme.
+   *
+   * @param mappingLocation the mapping location
+   * @return the pid scheme
+   * @throws PidSchemeImportException the pid scheme import exception
+   */
   private PidScheme loadPersistentIdentifierScheme(Location mappingLocation) throws PidSchemeImportException {
-    // Read the scheme file.
+    // Read the Scheme file.
     final PidScheme persistentIdentifierScheme;
     final XmlMapper xmlMapper = new XmlMapper();
     try (final InputStream input = mappingLocation.read()) {

@@ -4,7 +4,6 @@ package eu.europeana.normalization.pids.importer.model;
 import eu.europeana.normalization.pids.importer.exception.BadContentException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 
 public interface Location {
 
