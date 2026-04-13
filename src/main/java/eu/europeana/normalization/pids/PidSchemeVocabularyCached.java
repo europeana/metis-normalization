@@ -28,8 +28,8 @@ import org.slf4j.LoggerFactory;
 public final class PidSchemeVocabularyCached {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
-  private static final long IMPORT_CACHE_TTL_HOUR = 24L * 3600L * 1000L;
+  private static final long MILLISECONDS_PER_SECOND = 1000L;
+  private static final long IMPORT_CACHE_TTL_HOUR = 24L * 3600L * MILLISECONDS_PER_SECOND;
   private static final String URI_SCHEME = "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/config/pid_directory.yaml";
   private static final int MAX_IMPORT_RETRIES = 5;
   private static final long RETRY_BACKOFF_MS = 1000L;
@@ -182,7 +182,7 @@ public final class PidSchemeVocabularyCached {
     if (!schemes.isEmpty()) {
       lastImportTime = System.currentTimeMillis();
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
-          (System.currentTimeMillis() - lastImportTime) / 1000);
+          (System.currentTimeMillis() - lastImportTime) / MILLISECONDS_PER_SECOND);
       return List.copyOf(schemes);
     }
 

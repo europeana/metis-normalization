@@ -5,6 +5,9 @@ import eu.europeana.normalization.pids.importer.exception.BadContentException;
 import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * The interface Location.
+ */
 public interface Location {
 
   /**
