@@ -34,6 +34,7 @@
     <version.jena.iri>4.7.0</version.jena.iri>
     <version.jena.core>4.7.0</version.jena.core>
     <version.jericho-html>3.4</version.jericho-html>
+    <version.caffeine>3.2.3</version.caffeine>
   </properties>
 
   <dependencyManagement>
@@ -54,7 +55,6 @@
       <artifactId>metis-schema</artifactId>
       <version>${version.metis-schema}</version>
     </dependency>
-
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-jackson</artifactId>
@@ -68,6 +68,12 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>2.0.12</version> <!-- or latest -->
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.ibm.icu</groupId>
@@ -102,6 +108,10 @@
     <dependency>
       <groupId>tools.jackson.dataformat</groupId>
       <artifactId>jackson-dataformat-xml</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>tools.jackson.dataformat</groupId>
+      <artifactId>jackson-dataformat-yaml</artifactId>
     </dependency>
     <dependency>
       <groupId>net.htmlparser.jericho</groupId>

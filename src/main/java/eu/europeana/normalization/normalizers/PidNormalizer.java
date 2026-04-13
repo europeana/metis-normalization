@@ -15,7 +15,7 @@ import eu.europeana.normalization.model.ConfidenceLevel;
 import eu.europeana.normalization.model.NormalizeActionResult;
 import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.pids.PidMatchResult;
-import eu.europeana.normalization.pids.PidSchemeVocabulary;
+import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import eu.europeana.normalization.util.NormalizationException;
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ public class PidNormalizer implements RecordNormalizeAction {
    * @throws NormalizationConfigurationException If the vocabulary could not be loaded.
    */
   public PidNormalizer() throws NormalizationConfigurationException {
-    this.pidSchemeMatcher = PidSchemeVocabulary.getMatcher();
+    this.pidSchemeMatcher = PidSchemeVocabularyCached.getMatcher();
   }
 
   @Override
