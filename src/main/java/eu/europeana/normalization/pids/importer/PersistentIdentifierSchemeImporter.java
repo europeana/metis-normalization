@@ -61,15 +61,15 @@ public record PersistentIdentifierSchemeImporter(Location directoryLocation) imp
   /**
    * Load persistent identifier scheme pid scheme.
    *
-   * @param mappingLocation the mapping location
+   * @param pidSchemeLocation the mapping location
    * @return the pid scheme
    * @throws PidSchemeImportException the pid scheme import exception
    */
-  private PidScheme loadPersistentIdentifierScheme(Location mappingLocation) throws PidSchemeImportException {
+  private PidScheme loadPersistentIdentifierScheme(Location pidSchemeLocation) throws PidSchemeImportException {
     // Read the Scheme file.
     final PidScheme persistentIdentifierScheme;
     final XmlMapper xmlMapper = new XmlMapper();
-    try (final InputStream input = mappingLocation.read()) {
+    try (final InputStream input = pidSchemeLocation.read()) {
       persistentIdentifierScheme = xmlMapper
           .readValue(input, PersistentIdentifierSchemes.class)
           .getSchemes()
@@ -77,10 +77,10 @@ public record PersistentIdentifierSchemeImporter(Location directoryLocation) imp
           .map(PidScheme::new)
           .findFirst()
           .orElseThrow(() -> new PidSchemeImportException(
-              "No pid scheme found in file at [" + mappingLocation + "]."));
+              "No pid scheme found in file at [" + pidSchemeLocation + "]."));
     } catch (IOException e) {
       throw new PidSchemeImportException(
-          "Could not read pid scheme at [" + mappingLocation + "].", e);
+          "Could not read pid scheme at [" + pidSchemeLocation + "].", e);
     }
     // return the scheme
     return persistentIdentifierScheme;

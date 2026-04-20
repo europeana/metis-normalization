@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:edm="http://www.europeana.eu/schemas/edm/" xmlns:doap="http://usefulinc.com/ns/doap#" xmlns:rdfs="https://www.w3.org/TR/rdf-schema/#">
+  <edm:PersistentIdentifierScheme rdf:about="http://data.europeana.eu/scheme/pid/nbn:nl">
+    <dcterms:title>URN:NBN:NL</dcterms:title>
+    <edm:canonicalPattern>${1}</edm:canonicalPattern>
+    <edm:resolvablePattern>https://persistent-identifier.nl/${0}</edm:resolvablePattern>
+    <edm:matchingPattern>(urn:nbn:nl[:-]\S+)</edm:matchingPattern>
+    <edm:matchingPattern>https?://www\.persistent-identifier\.nl/(urn:nbn:nl[:-]\S+)</edm:matchingPattern>
+    <edm:matchingPattern>https?://persistent-identifier\.nl/(urn:nbn:nl[:-]\S+)</edm:matchingPattern>
+  </edm:PersistentIdentifierScheme>
+</rdf:RDF>

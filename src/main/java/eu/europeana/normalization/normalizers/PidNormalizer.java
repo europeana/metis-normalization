@@ -16,7 +16,6 @@ import eu.europeana.normalization.model.NormalizeActionResult;
 import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.pids.PidMatchResult;
 import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
-import eu.europeana.normalization.util.NormalizationConfigurationException;
 import eu.europeana.normalization.util.NormalizationException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,14 +33,15 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class PidNormalizer implements RecordNormalizeAction {
 
-  private final Function<String, PidMatchResult> pidSchemeMatcher;
+  private final PidSchemeVocabularyCached pidSchemeVocabulary;
 
   /**
-   * Constructor.
-   * @throws NormalizationConfigurationException If the vocabulary could not be loaded.
+   * Instantiates a new Pid normalizer.
+   *
+   * @param pidSchemeVocabularyCached the pid scheme vocabulary cached
    */
-  public PidNormalizer() throws NormalizationConfigurationException {
-    this.pidSchemeMatcher = PidSchemeVocabularyCached.getMatcher();
+  public PidNormalizer(PidSchemeVocabularyCached pidSchemeVocabularyCached)  {
+    this.pidSchemeVocabulary = pidSchemeVocabularyCached;
   }
 
   @Override
@@ -73,7 +73,7 @@ public class PidNormalizer implements RecordNormalizeAction {
       for (Pid nonNormalizedPid : nonNormalizedPidsInProxy) {
 
         // Normalize the PID. If we can't, add the PID directly as a result.
-        final PidMatchResult normalization = pidSchemeMatcher.apply(nonNormalizedPid.getString());
+        final PidMatchResult normalization = pidSchemeVocabulary.matchPid(nonNormalizedPid.getString());
         if (normalization == null) {
           resultPidsInProxy.add(nonNormalizedPid);
           continue;

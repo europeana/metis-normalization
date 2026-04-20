@@ -10,6 +10,7 @@ import eu.europeana.normalization.normalizers.NormalizeAction;
 import eu.europeana.normalization.normalizers.PidNormalizer;
 import eu.europeana.normalization.normalizers.RemoveDuplicateStatementNormalizer;
 import eu.europeana.normalization.normalizers.XmlLangNormalizer;
+import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
 import eu.europeana.normalization.settings.NormalizerSettings;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 
@@ -68,7 +69,7 @@ public enum NormalizerStep {
   /**
    * Normalize PIDs. See {@link PidNormalizer}.
    **/
-  NORMALIZE_PIDS(settings -> new PidNormalizer());
+  NORMALIZE_PIDS(settings -> new PidNormalizer(new PidSchemeVocabularyCached()));
 
   private final ActionCreator actionCreator;
 

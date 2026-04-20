@@ -10,12 +10,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,24 +27,37 @@ import org.slf4j.LoggerFactory;
 public final class PidSchemeVocabularyCached {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-  private static final long MILLISECONDS_PER_SECOND = 1000L;
-  private static final long IMPORT_CACHE_TTL_HOUR = 24L * 3600L * MILLISECONDS_PER_SECOND;
+  private static final long IMPORT_CACHE_TTL_HOUR = Duration.ofHours(24).toMillis();
   private static final String URI_SCHEME = "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/config/pid_directory.yaml";
   private static final int MAX_IMPORT_RETRIES = 5;
-  private static final long RETRY_BACKOFF_MS = 1000L;
+  private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
 
-  private static PidSchemeVocabularyCached instance;
-  private final CopyOnWriteArrayList<PidScheme> schemes;
+  private final List<PidScheme> schemes;
   private final ReentrantLock importCacheLock;
-  private volatile long lastImportTime = 0;
+  private final String sourceUri;
+  private volatile long lastSuccessfulImportedTime = 0;
 
   /**
-   * Instantiates a new Pid scheme vocabulary cached.
+   * Instantiates new Pid scheme vocabulary cached.
    *
    * @throws NormalizationConfigurationException the normalization configuration exception
    */
-  private PidSchemeVocabularyCached() throws NormalizationConfigurationException {
-    schemes = new CopyOnWriteArrayList<>();
+  public PidSchemeVocabularyCached() throws NormalizationConfigurationException {
+    this(URI_SCHEME);
+  }
+
+  /**
+   * Instantiates new Pid scheme vocabulary cached.
+   *
+   * @param sourceUri the source uri
+   * @throws NormalizationConfigurationException the normalization configuration exception
+   */
+  PidSchemeVocabularyCached(String sourceUri) throws NormalizationConfigurationException {
+    if (sourceUri == null || sourceUri.isBlank()) {
+      throw new IllegalArgumentException("sourceUri must not be blank");
+    }
+    this.sourceUri = sourceUri;
+    schemes = new ArrayList<>();
     importCacheLock = new ReentrantLock();
     // Pre-populate cache on initialization
     try {
@@ -54,32 +66,6 @@ public final class PidSchemeVocabularyCached {
     } catch (NormalizationConfigurationException e) {
       throw new NormalizationConfigurationException("Failed to initialize PID scheme vocabulary during construction", e);
     }
-  }
-
-  /**
-   * This method provides access to the PID scheme vocabulary. Thread-safe singleton accessor.
-   *
-   * @return The PID scheme vocabulary.
-   * @throws NormalizationConfigurationException If the vocabulary could not be loaded.
-   */
-  public static PidSchemeVocabularyCached getPidSchemes() throws NormalizationConfigurationException {
-    synchronized (PidSchemeVocabularyCached.class) {
-      if (instance == null) {
-        instance = new PidSchemeVocabularyCached();
-      }
-      return instance;
-    }
-  }
-
-  /**
-   * Creates a matcher for PIDs that can match a PID against this vocabulary.
-   *
-   * @return A PID matcher.
-   * @throws NormalizationConfigurationException If the vocabulary could not be loaded.
-   */
-  public static Function<String, PidMatchResult> getMatcher()
-      throws NormalizationConfigurationException {
-    return getPidSchemes()::matchPid;
   }
 
   /**
@@ -112,38 +98,64 @@ public final class PidSchemeVocabularyCached {
   }
 
   /**
-   * Gets all schemes from cache.
+   * Gets all schemes from the cache.
    * 1. Fast path: cache is still valid, return it directly.
-   * 2. Slow path: cache needs to refresh, use lock to prevent concurrent imports.
+   * 2. Slow path: the cache needs to refresh, use lock to prevent concurrent imports.
    *
    * @return the all schemes from cache
    * @throws NormalizationConfigurationException the normalization configuration exception
    */
   private List<PidScheme> getAllSchemesFromCache() throws NormalizationConfigurationException {
-    long currentTime = System.currentTimeMillis();
-
     // 1. Fast path: cache is still valid
-    if (!schemes.isEmpty() && (currentTime - lastImportTime) <= IMPORT_CACHE_TTL_HOUR) {
+    if (isCacheValid()) {
       return Collections.unmodifiableList(schemes);
     }
 
-    // 2. Slow path: cache needs to refresh, use lock to prevent concurrent imports
-    try {
-      importCacheLock.lock();
-      currentTime = System.currentTimeMillis();
-      if (!schemes.isEmpty() && (currentTime - lastImportTime) <= IMPORT_CACHE_TTL_HOUR) {
-        return Collections.unmodifiableList(schemes);
-      }
+    // 2. Slow path: the cache needs to refresh, use lock to prevent concurrent imports
+    refreshCacheIfNeeded();
+    return Collections.unmodifiableList(schemes);
+  }
 
-      LOGGER.info("Refreshing PID schemes import cache");
-      List<PidScheme> imported = importPidSchemesWithRetry();
-      schemes.clear();
-      schemes.addAll(imported);
-      lastImportTime = System.currentTimeMillis();
-      return Collections.unmodifiableList(schemes);
+  /**
+   * Is cache valid boolean.
+   *
+   * @return the boolean
+   */
+  private boolean isCacheValid() {
+    return !schemes.isEmpty() && (System.currentTimeMillis() - lastSuccessfulImportedTime) <= IMPORT_CACHE_TTL_HOUR;
+  }
+
+  /**
+   * Refresh the cache if needed.
+   *
+   * @throws NormalizationConfigurationException the normalization configuration exception
+   */
+  private void refreshCacheIfNeeded() throws NormalizationConfigurationException {
+    if (!importCacheLock.tryLock()) {
+      LOGGER.debug("Another thread is refreshing the PID scheme cache");
+      return;
+    }
+    try {
+      if (isCacheValid()) {
+        return;
+      }
+      refreshCache();
     } finally {
       importCacheLock.unlock();
     }
+  }
+
+  /**
+   * Refresh cache.
+   *
+   * @throws NormalizationConfigurationException the normalization configuration exception
+   */
+  private void refreshCache() throws NormalizationConfigurationException {
+    LOGGER.info("Refreshing PID schemes import cache");
+    List<PidScheme> imported = importPidSchemesWithRetry();
+    schemes.clear();
+    schemes.addAll(imported);
+    lastSuccessfulImportedTime = System.currentTimeMillis();
   }
 
   /**
@@ -155,14 +167,12 @@ public final class PidSchemeVocabularyCached {
    */
   private List<PidScheme> importPidSchemesWithRetry() throws NormalizationConfigurationException {
     NormalizationConfigurationException lastException = null;
-
     for (int attempt = 1; attempt <= MAX_IMPORT_RETRIES; attempt++) {
       try {
         LOGGER.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
         return importPidSchemes();
       } catch (NormalizationConfigurationException exception) {
         lastException = exception;
-
         if (attempt < MAX_IMPORT_RETRIES) {
           long exponentialBackoffInMs = RETRY_BACKOFF_MS * (1L << (attempt - 1));
           LOGGER.warn("PID scheme import failed (attempt {}), retrying in {}ms: {}",
@@ -180,9 +190,8 @@ public final class PidSchemeVocabularyCached {
     }
 
     if (!schemes.isEmpty()) {
-      lastImportTime = System.currentTimeMillis();
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
-          (System.currentTimeMillis() - lastImportTime) / MILLISECONDS_PER_SECOND);
+          (System.currentTimeMillis() - lastSuccessfulImportedTime) /  Duration.ofSeconds(1).toMillis());
       return List.copyOf(schemes);
     }
 
@@ -199,32 +208,41 @@ public final class PidSchemeVocabularyCached {
    */
   private List<PidScheme> importPidSchemes() throws NormalizationConfigurationException {
     try {
-      URI uri = new URI(URI_SCHEME);
+      URI uri = new URI(sourceUri);
       final URL fileUrl = uri.toURL();
-      final PersistentIdentifierSchemeImporterFactory factory = new PersistentIdentifierSchemeImporterFactory();
-      final PersistentIdentifierSchemeImporter importer = factory.createImporter(fileUrl);
+      final PersistentIdentifierSchemeImporter importer =
+          new PersistentIdentifierSchemeImporterFactory()
+              .createImporter(fileUrl);
+      if (importer == null) {
+        throw new NormalizationConfigurationException("Could not create importer for PID schemes URI: " + sourceUri, null);
+      }
 
       final List<PidScheme> result = loadSchemesFromImporter(importer);
 
       if (result.isEmpty()) {
         throw new NormalizationConfigurationException("No PID schemes were successfully imported", null);
       }
-
+      lastSuccessfulImportedTime = System.currentTimeMillis();
       LOGGER.info("Successfully imported {} PID schemes", result.size());
       return result;
 
     } catch (URISyntaxException | MalformedURLException exception) {
-      throw new NormalizationConfigurationException("Could not parse PID schemes URI: " + URI_SCHEME, exception);
+      throw new NormalizationConfigurationException("Could not parse PID schemes URI: " + sourceUri, exception);
     } catch (PidSchemeImportException e) {
       throw new NormalizationConfigurationException("Could not import PID schemes from remote source", e);
     }
   }
 
+  /**
+   * Load schemes from the importer list.
+   *
+   * @param importer the importer
+   * @return the list
+   * @throws PidSchemeImportException the pid scheme import exception
+   */
   private List<PidScheme> loadSchemesFromImporter(PersistentIdentifierSchemeImporter importer) throws PidSchemeImportException {
     final List<PidScheme> result = new ArrayList<>();
-    final Iterable<PidSchemeLoadable> pidSchemesLoadable = importer.importPidSchemes();
-
-    for (PidSchemeLoadable pidSchemeLoadable : pidSchemesLoadable) {
+    for (PidSchemeLoadable pidSchemeLoadable : importer.importPidSchemes()) {
       if (pidSchemeLoadable == null) {
         LOGGER.warn("Skipping null PID scheme from importer");
         continue;
@@ -232,7 +250,7 @@ public final class PidSchemeVocabularyCached {
       try {
         result.add(pidSchemeLoadable.load());
       } catch (PidSchemeImportException exception) {
-        LOGGER.error("Failed to load individual PID scheme, continuing with others", exception);
+        LOGGER.warn("Failed to load individual PID scheme skipping it, continuing with others", exception);
       }
     }
     return Collections.unmodifiableList(result);
