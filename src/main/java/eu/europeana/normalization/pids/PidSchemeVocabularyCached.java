@@ -32,10 +32,10 @@ public final class PidSchemeVocabularyCached {
   private static final int MAX_IMPORT_RETRIES = 5;
   private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
 
-  private final List<PidScheme> schemes;
+  private List<PidScheme> schemes;
   private final ReentrantLock importCacheLock;
   private final String sourceUri;
-  private volatile long lastSuccessfulImportedTime = 0;
+  private volatile long lastSuccessfulImportTime = 0;
 
   /**
    * Instantiates new Pid scheme vocabulary cached.
@@ -122,7 +122,7 @@ public final class PidSchemeVocabularyCached {
    * @return the boolean
    */
   private boolean isCacheValid() {
-    return !schemes.isEmpty() && (System.currentTimeMillis() - lastSuccessfulImportedTime) <= IMPORT_CACHE_TTL_HOUR;
+    return !schemes.isEmpty() && (System.currentTimeMillis() - lastSuccessfulImportTime) <= IMPORT_CACHE_TTL_HOUR;
   }
 
   /**
@@ -155,7 +155,7 @@ public final class PidSchemeVocabularyCached {
     List<PidScheme> imported = importPidSchemesWithRetry();
     schemes.clear();
     schemes.addAll(imported);
-    lastSuccessfulImportedTime = System.currentTimeMillis();
+    lastSuccessfulImportTime = System.currentTimeMillis();
   }
 
   /**
@@ -191,7 +191,7 @@ public final class PidSchemeVocabularyCached {
 
     if (!schemes.isEmpty()) {
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
-          (System.currentTimeMillis() - lastSuccessfulImportedTime) /  Duration.ofSeconds(1).toMillis());
+          Duration.ofMillis(System.currentTimeMillis() - lastSuccessfulImportTime).toSeconds());
       return List.copyOf(schemes);
     }
 
@@ -222,7 +222,7 @@ public final class PidSchemeVocabularyCached {
       if (result.isEmpty()) {
         throw new NormalizationConfigurationException("No PID schemes were successfully imported", null);
       }
-      lastSuccessfulImportedTime = System.currentTimeMillis();
+      lastSuccessfulImportTime = System.currentTimeMillis();
       LOGGER.info("Successfully imported {} PID schemes", result.size());
       return result;
 
