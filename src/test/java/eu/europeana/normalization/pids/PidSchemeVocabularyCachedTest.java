@@ -1,5 +1,9 @@
 package eu.europeana.normalization.pids;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.ok;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -7,17 +11,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.common.ConsoleNotifier;
+import com.github.tomakehurst.wiremock.http.JvmProxyConfigurer;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLStreamHandler;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,60 +36,42 @@ class PidSchemeVocabularyCachedTest {
   private static PidSchemeVocabularyCached vocabulary;
   private static final String TEST_PID_ARK = "ark:/12148/bpt6k279983";
   private static final String TEST_PID_URN = "urn:nbn:nl:ui:29-8f66e0a8-b7c9-40a4-be28-54a7c0177061";
+  private static WireMockServer wireMockServer;
 
   @BeforeAll
-  static void setUp() throws NormalizationConfigurationException {
-    String sourceUri = "mock://repo/directory.yml";
+  static void setUp() throws NormalizationConfigurationException, IOException {
+    String sourceUri = "http://metis-normalization-github.test/directory.yaml";
+    wireMockServer = new WireMockServer(wireMockConfig()
+        .dynamicPort()
+        .enableBrowserProxying(true)
+        .notifier(new ConsoleNotifier(true)));
+    wireMockServer.start();
 
-    /*
-     * Install custom URL protocol handler.
-     */
-    URL.setURLStreamHandlerFactory(protocol -> {
+    JvmProxyConfigurer.configureFor(wireMockServer);
 
-      if (!"mock".equals(protocol)) {
-        return null;
-      }
-
-      return new URLStreamHandler() {
-
-        @Override
-        protected URLConnection openConnection(URL url) {
-
-          return new URLConnection(url) {
-
-            @Override
-            public void connect() {
-              // no-op
-            }
-
-            @Override
-            public InputStream getInputStream() {
-
-              String path = url.toString();
-
-              if (path.endsWith("directory.yml")) {
-                return stream("directory.yml");
-              }
-
-              if (path.endsWith("scheme_a.rdf")) {
-                return stream("scheme_a.rdf");
-              }
-
-              if (path.endsWith("scheme_b.rdf")) {
-                return stream("scheme_b.rdf");
-              }
-
-              throw new IllegalArgumentException("Unknown mock path: " + path);
-            }
-          };
-        }
-      };
-    });
+    wireMockServer.stubFor(get("/directory.yaml")
+        .withHost(equalTo("metis-normalization-github.test"))
+        .willReturn(ok().withBody(loadResourceContent("directory.yaml"))));
+    wireMockServer.stubFor(get("/scheme_a.rdf")
+        .withHost(equalTo("metis-normalization-github.test"))
+        .willReturn(ok().withBody(loadResourceContent("scheme_a.rdf"))));
+    wireMockServer.stubFor(get("/scheme_b.rdf")
+        .withHost(equalTo("metis-normalization-github.test"))
+        .willReturn(ok().withBody(loadResourceContent("scheme_b.rdf"))));
     vocabulary = new PidSchemeVocabularyCached(sourceUri);
   }
 
-  private static InputStream stream(String value) {
-    return  PidSchemeVocabularyCachedTest.class.getClassLoader().getResourceAsStream("pidTestSchemes/"+value);
+  @AfterAll
+  static void tearDown() {
+    wireMockServer.stop();
+  }
+
+  private static String loadResourceContent(String value) throws IOException {
+    String resource = "";
+    try (InputStream inputStream = PidSchemeVocabularyCachedTest.class.getClassLoader().getResourceAsStream("pidTestSchemes/"+value)) {
+      resource = new String(Objects.requireNonNull(inputStream).readAllBytes());
+    }
+    return resource;
   }
 
   private static Stream<Arguments> providedPidSchemeInformation() {
