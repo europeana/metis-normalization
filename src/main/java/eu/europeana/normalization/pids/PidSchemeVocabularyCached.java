@@ -61,7 +61,7 @@ public final class PidSchemeVocabularyCached {
     importCacheLock = new ReentrantLock();
     // Pre-populate cache on initialization
     try {
-      initializePidSchemes();
+      refreshCache();
       LOGGER.info("PID scheme vocabulary initialized successfully");
     } catch (NormalizationConfigurationException e) {
       throw new NormalizationConfigurationException("Failed to initialize PID scheme vocabulary during construction", e);
@@ -86,15 +86,6 @@ public final class PidSchemeVocabularyCached {
       LOGGER.error("Failed to match PID against PID scheme vocabulary", e);
     }
     return null;
-  }
-
-  /**
-   * Initialize pid schemes.
-   *
-   * @throws NormalizationConfigurationException the normalization configuration exception
-   */
-  private void initializePidSchemes() throws NormalizationConfigurationException {
-    schemes.addAll(importPidSchemesWithRetry());
   }
 
   /**
@@ -152,10 +143,8 @@ public final class PidSchemeVocabularyCached {
    */
   private void refreshCache() throws NormalizationConfigurationException {
     LOGGER.info("Refreshing PID schemes import cache");
-    List<PidScheme> imported = importPidSchemesWithRetry();
     schemes.clear();
-    schemes.addAll(imported);
-    lastSuccessfulImportTime = System.currentTimeMillis();
+    schemes.addAll(importPidSchemesWithRetry());
   }
 
   /**
@@ -222,8 +211,8 @@ public final class PidSchemeVocabularyCached {
       if (result.isEmpty()) {
         throw new NormalizationConfigurationException("No PID schemes were successfully imported", null);
       }
-      lastSuccessfulImportTime = System.currentTimeMillis();
       LOGGER.info("Successfully imported {} PID schemes", result.size());
+      lastSuccessfulImportTime = System.currentTimeMillis();
       return result;
 
     } catch (URISyntaxException | MalformedURLException exception) {
