@@ -3,7 +3,6 @@ package eu.europeana.normalization.pids;
 import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImporter;
 import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImporterFactory;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
-import eu.europeana.normalization.pids.importer.model.PidSchemeLoadable;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
@@ -206,7 +205,7 @@ public final class PidSchemeVocabularyCached {
         throw new NormalizationConfigurationException("Could not create importer for PID schemes URI: " + sourceUri, null);
       }
 
-      final List<PidScheme> result = loadSchemesFromImporter(importer);
+      final List<PidScheme> result = importer.importPidSchemes();
 
       if (result.isEmpty()) {
         throw new NormalizationConfigurationException("No PID schemes were successfully imported", null);
@@ -220,28 +219,5 @@ public final class PidSchemeVocabularyCached {
     } catch (PidSchemeImportException e) {
       throw new NormalizationConfigurationException("Could not import PID schemes from remote source", e);
     }
-  }
-
-  /**
-   * Load schemes from the importer list.
-   *
-   * @param importer the importer
-   * @return the list
-   * @throws PidSchemeImportException the pid scheme import exception
-   */
-  private List<PidScheme> loadSchemesFromImporter(PersistentIdentifierSchemeImporter importer) throws PidSchemeImportException {
-    final List<PidScheme> importedSchemes = new ArrayList<>();
-    for (PidSchemeLoadable pidSchemeLoadable : importer.importPidSchemes()) {
-      if (pidSchemeLoadable == null) {
-        LOGGER.warn("Skipping null PID scheme from importer");
-        continue;
-      }
-      try {
-        importedSchemes.add(pidSchemeLoadable.load());
-      } catch (PidSchemeImportException exception) {
-        LOGGER.warn("Failed to load individual PID scheme skipping it, continuing with others", exception);
-      }
-    }
-    return importedSchemes;
   }
 }

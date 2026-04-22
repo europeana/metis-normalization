@@ -8,10 +8,13 @@ import eu.europeana.normalization.pids.importer.model.Location;
 import eu.europeana.normalization.pids.importer.model.PidSchemeLoadable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.dataformat.xml.XmlMapper;
 import tools.jackson.dataformat.yaml.YAMLFactory;
@@ -20,9 +23,9 @@ import tools.jackson.dataformat.yaml.YAMLFactory;
  * The type Persistent identifier scheme importer.
  */
 public record PersistentIdentifierSchemeImporter(Location directoryLocation) implements PersistentIdentifierSchemeImportable {
-
+  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   @Override
-  public Iterable<PidSchemeLoadable> importPidSchemes() throws PidSchemeImportException {
+  public List<PidScheme> importPidSchemes() throws PidSchemeImportException {
     // Obtain the directory entries.
     final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
     final PidSchemeReferencesConfiguration referencesConfiguration;
@@ -36,7 +39,7 @@ public record PersistentIdentifierSchemeImporter(Location directoryLocation) imp
     }
 
     // Compile the pid scheme loaders
-    final List<PidSchemeLoadable> result = new ArrayList<>();
+    final List<PidSchemeLoadable> pidSchemeLoadables = new ArrayList<>();
     for (String reference : referencesConfiguration.getPidSchemeEntries()) {
       final Location mappingLocation;
       try {
@@ -46,13 +49,30 @@ public record PersistentIdentifierSchemeImporter(Location directoryLocation) imp
             String.format("Could not read pid scheme reference at [%s] value [%s].",
                 directoryLocation, reference), e);
       }
-      result.add(() -> loadPersistentIdentifierScheme(mappingLocation));
+      pidSchemeLoadables.add(() -> loadPersistentIdentifierScheme(mappingLocation));
     }
 
-    // Done
-    return result;
+    // Load the pid schemes
+    final List<PidScheme> importedSchemes = new ArrayList<>();
+    for (PidSchemeLoadable pidSchemeLoadable : pidSchemeLoadables) {
+      if (pidSchemeLoadable == null) {
+        LOGGER.warn("Skipping null PID scheme from importer");
+        continue;
+      }
+      try {
+        importedSchemes.add(pidSchemeLoadable.load());
+      } catch (PidSchemeImportException exception) {
+        LOGGER.warn("Failed to load individual PID scheme skipping it, continuing with others", exception);
+      }
+    }
+    return importedSchemes;
   }
 
+  /**
+   * Gets the directory location.
+   *
+   * @return the directory location
+   */
   @Override
   public Location getDirectoryLocation() {
     return directoryLocation;
@@ -85,5 +105,4 @@ public record PersistentIdentifierSchemeImporter(Location directoryLocation) imp
     // return the scheme
     return persistentIdentifierScheme;
   }
-
 }

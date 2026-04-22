@@ -12,13 +12,12 @@ import eu.europeana.normalization.pids.PidScheme;
 import eu.europeana.normalization.pids.importer.exception.BadContentException;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
 import eu.europeana.normalization.pids.importer.model.Location;
-import eu.europeana.normalization.pids.importer.model.PidSchemeLoadable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -106,13 +105,11 @@ class PersistentIdentifierSchemeImporterTest {
         new PersistentIdentifierSchemeImporter(mockLocation);
 
     // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
+    List<PidScheme> result = importer.importPidSchemes();
 
     // Then
     assertNotNull(result);
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
-    assertEquals(1, resultList.size());
+    assertEquals(1, result.size());
   }
 
   /**
@@ -154,13 +151,11 @@ class PersistentIdentifierSchemeImporterTest {
         new PersistentIdentifierSchemeImporter(mockLocation);
 
     // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
+    List<PidScheme> result = importer.importPidSchemes();
 
     // Then
     assertNotNull(result);
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
-    assertEquals(3, resultList.size());
+    assertEquals(3, result.size());
   }
 
   /**
@@ -181,7 +176,7 @@ class PersistentIdentifierSchemeImporterTest {
     assertNotNull(exception.getMessage());
     assertTrue(exception.getMessage().contains("Could not read configuration directory"));
     assertNotNull(exception.getCause());
-    assertTrue(exception.getCause() instanceof IOException);
+    assertInstanceOf(IOException.class, exception.getCause());
   }
 
   /**
@@ -212,7 +207,7 @@ class PersistentIdentifierSchemeImporterTest {
     assertTrue(
         exception.getMessage().contains("Could not read pid scheme reference"));
     assertNotNull(exception.getCause());
-    assertTrue(exception.getCause() instanceof BadContentException);
+    assertInstanceOf(BadContentException.class, exception.getCause());
   }
 
   /**
@@ -241,11 +236,9 @@ class PersistentIdentifierSchemeImporterTest {
         new PersistentIdentifierSchemeImporter(mockLocation);
 
     // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
+    List<PidScheme> result = importer.importPidSchemes();
 
-    PidScheme scheme = resultList.getFirst().load();
+    PidScheme scheme = result.getFirst();
 
     // Then
     assertNotNull(scheme);
@@ -276,17 +269,11 @@ class PersistentIdentifierSchemeImporterTest {
         new PersistentIdentifierSchemeImporter(mockLocation);
 
     // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
+    List<PidScheme> result = importer.importPidSchemes();
+
 
     // Then
-    PidSchemeImportException exception =
-        assertThrows(PidSchemeImportException.class, () -> resultList.getFirst().load());
-    assertNotNull(exception.getMessage());
-    assertTrue(exception.getMessage().contains("Could not read pid scheme"));
-    assertNotNull(exception.getCause());
-    assertInstanceOf(IOException.class, exception.getCause());
+    assertThrows(NoSuchElementException.class, result::getFirst);
   }
 
   /**
@@ -314,14 +301,9 @@ class PersistentIdentifierSchemeImporterTest {
     PersistentIdentifierSchemeImporter importer =
         new PersistentIdentifierSchemeImporter(mockLocation);
 
-    // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
-
-    // Then - Empty scheme list returns null, which causes NPE on stream().findFirst()
+    // When & Then - Empty scheme list returns null, which causes NPE on stream().findFirst()
     // This tests the error path when no schemes are found
-    assertThrows(Exception.class, () -> resultList.getFirst().load());
+    assertThrows(Exception.class, importer::importPidSchemes);
   }
 
   /**
@@ -382,11 +364,9 @@ class PersistentIdentifierSchemeImporterTest {
         new PersistentIdentifierSchemeImporter(mockLocation);
 
     // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
+    List<PidScheme> result = importer.importPidSchemes();
 
-    PidScheme scheme = resultList.getFirst().load();
+    PidScheme scheme = result.getFirst();
 
     // Then
     assertNotNull(scheme);
@@ -410,13 +390,11 @@ class PersistentIdentifierSchemeImporterTest {
         new PersistentIdentifierSchemeImporter(mockLocation);
 
     // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
+    List<PidScheme> result = importer.importPidSchemes();
 
     // Then
     assertNotNull(result);
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
-    assertEquals(0, resultList.size());
+    assertEquals(0, result.size());
   }
 
   /**
@@ -499,12 +477,10 @@ class PersistentIdentifierSchemeImporterTest {
         new PersistentIdentifierSchemeImporter(mockLocation);
 
     // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
+    List<PidScheme> result = importer.importPidSchemes();
 
-    PidScheme scheme1 = resultList.getFirst().load();
-    PidScheme scheme2 = resultList.getFirst().load();
+    PidScheme scheme1 = result.getFirst();
+    PidScheme scheme2 = result.getFirst();
 
     // Then
     assertNotNull(scheme1);
@@ -538,13 +514,8 @@ class PersistentIdentifierSchemeImporterTest {
     PersistentIdentifierSchemeImporter importer =
         new PersistentIdentifierSchemeImporter(mockLocation);
 
-    // When
-    Iterable<PidSchemeLoadable> result = importer.importPidSchemes();
-    List<PidSchemeLoadable> resultList = new ArrayList<>();
-    result.forEach(resultList::add);
-
-    // Then - Jackson will throw an exception for invalid XML, which will be wrapped
-    Exception exception = assertThrows(Exception.class, () -> resultList.getFirst().load());
+    // When & Then - Jackson will throw an exception for invalid XML, which will be wrapped
+    Exception exception = assertThrows(Exception.class, importer::importPidSchemes);
     assertNotNull(exception);
   }
 }

@@ -1,21 +1,23 @@
 package eu.europeana.normalization.pids.importer;
 
+import eu.europeana.normalization.pids.PidScheme;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
 import eu.europeana.normalization.pids.importer.model.Location;
-import eu.europeana.normalization.pids.importer.model.PidSchemeLoadable;
+import java.util.List;
 
 /**
  * The interface Persistent identifier scheme importable.
  */
 public interface PersistentIdentifierSchemeImportable {
 
+
   /**
-   * Import pid schemes iterable.
+   * Import pid schemes list.
    *
-   * @return the iterable
+   * @return the list
    * @throws PidSchemeImportException the pid scheme import exception
    */
-  Iterable<PidSchemeLoadable> importPidSchemes() throws PidSchemeImportException;
+  List<PidScheme> importPidSchemes() throws PidSchemeImportException;
 
   /**
    * Gets directory location.
