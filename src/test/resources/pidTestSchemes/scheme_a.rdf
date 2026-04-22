@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:edm="http://www.europeana.eu/schemas/edm/" xmlns:doap="http://usefulinc.com/ns/doap#" xmlns:rdfs="https://www.w3.org/TR/rdf-schema/#">
+  <edm:PersistentIdentifierScheme rdf:about="http://data.europeana.eu/scheme/pid/ark">
+    <dcterms:title>Archival Resource Key (ARK)</dcterms:title>
+    <rdfs:seeAlso rdf:resource="https://arks.org/"/>
+    <doap:maintainer>ARK Alliance</doap:maintainer>
+    <edm:canonicalPattern>ark:${1}${2}${3}</edm:canonicalPattern>
+    <edm:resolvablePattern>https://n2t.net/${0}</edm:resolvablePattern>
+    <edm:matchingPattern>https?://ark\.bnf\.fr/ark:(/?[0-9]+)(/[a-z0-9=~\*\+@_$%\-]+)(/[a-z0-9=~\*\+@_$%\-/\.]*)?</edm:matchingPattern>
+    <edm:matchingPattern>https?://gallica\.bnf\.fr/ark:(/?[0-9]+)(/[a-z0-9=~\*\+@_$%\-]+)(/[a-z0-9=~\*\+@_$%\-/\.]*)?</edm:matchingPattern>
+    <edm:matchingPattern>https?://catalogue\.bnf\.fr/ark:(/?[0-9]+)(/[a-z0-9=~\*\+@_$%\-]+)(/[a-z0-9=~\*\+@_$%\-/\.]*)?</edm:matchingPattern>
+    <edm:matchingPattern>https?://n2t\.net/ark:(/?[0-9]+)(/[a-z0-9=~\*\+@_$%\-]+)(/[a-z0-9=~\*\+@_$%\-/\.]+)?</edm:matchingPattern>
+    <edm:matchingPattern>ark:(/?[0-9]+)(/[a-z0-9=~\*\+@_$%\-]+)(/[a-z0-9=~\*\+@_$%\-/\.]+)?</edm:matchingPattern>
+    <edm:matchingPattern>info:ark:(/?[0-9]+)(/[a-z0-9=~\*\+@_$%\-]+)(/[a-z0-9=~\*\+@_$%\-/\.]+)?</edm:matchingPattern>
+  </edm:PersistentIdentifierScheme>
+</rdf:RDF>
