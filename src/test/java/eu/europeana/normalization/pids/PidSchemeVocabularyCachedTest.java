@@ -3,6 +3,7 @@ package eu.europeana.normalization.pids;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.ok;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -49,20 +50,25 @@ class PidSchemeVocabularyCachedTest {
 
     JvmProxyConfigurer.configureFor(wireMockServer);
 
-    wireMockServer.stubFor(get("/directory.yaml")
+    wireMockServer.stubFor(get(urlEqualTo("/directory.yaml"))
         .withHost(equalTo("metis-normalization-github.test"))
+        .atPriority(1)
         .willReturn(ok().withBody(loadResourceContent("directory.yaml"))));
-    wireMockServer.stubFor(get("/scheme_a.rdf")
+    wireMockServer.stubFor(get(urlEqualTo("/scheme_a.rdf"))
         .withHost(equalTo("metis-normalization-github.test"))
+        .atPriority(1)
         .willReturn(ok().withBody(loadResourceContent("scheme_a.rdf"))));
-    wireMockServer.stubFor(get("/scheme_b.rdf")
+    wireMockServer.stubFor(get(urlEqualTo("/scheme_b.rdf"))
         .withHost(equalTo("metis-normalization-github.test"))
+        .atPriority(1)
         .willReturn(ok().withBody(loadResourceContent("scheme_b.rdf"))));
+
     vocabulary = new PidSchemeVocabularyCached(sourceUri);
   }
 
   @AfterAll
   static void tearDown() {
+    JvmProxyConfigurer.restorePrevious();
     wireMockServer.stop();
   }
 
