@@ -140,7 +140,8 @@ public final class PidSchemeVocabularyCached {
     LOGGER.info("Importing PID schemes");
     int attempt = 0;
     boolean importSuccessful = false;
-    while ( attempt++ <= MAX_IMPORT_RETRIES && !importSuccessful) {
+    while (attempt <= MAX_IMPORT_RETRIES && !importSuccessful) {
+      attempt++;
       try {
         LOGGER.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
         schemes = List.copyOf(importPidSchemes());
@@ -163,7 +164,7 @@ public final class PidSchemeVocabularyCached {
       }
     }
 
-    if (attempt >= MAX_IMPORT_RETRIES) {
+    if (!importSuccessful) {
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
           Duration.ofMillis(System.currentTimeMillis() - lastSuccessfulImportTime).toSeconds());
       if (schemes.isEmpty()) {
