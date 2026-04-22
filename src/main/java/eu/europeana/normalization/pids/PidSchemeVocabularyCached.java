@@ -12,7 +12,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
@@ -32,7 +31,7 @@ public final class PidSchemeVocabularyCached {
   private static final int MAX_IMPORT_RETRIES = 5;
   private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
 
-  private List<PidScheme> schemes;
+  private final List<PidScheme> schemes;
   private final ReentrantLock importCacheLock;
   private final String sourceUri;
   private volatile long lastSuccessfulImportTime = 0;
@@ -99,12 +98,12 @@ public final class PidSchemeVocabularyCached {
   private List<PidScheme> getAllSchemesFromCache() throws NormalizationConfigurationException {
     // 1. Fast path: cache is still valid
     if (isCacheValid()) {
-      return Collections.unmodifiableList(schemes);
+      return List.copyOf(schemes);
     }
 
     // 2. Slow path: the cache needs to refresh, use lock to prevent concurrent imports
     refreshCacheIfNeeded();
-    return Collections.unmodifiableList(schemes);
+    return List.copyOf(schemes);
   }
 
   /**
@@ -143,8 +142,9 @@ public final class PidSchemeVocabularyCached {
    */
   private void refreshCache() throws NormalizationConfigurationException {
     LOGGER.info("Refreshing PID schemes import cache");
+    List<PidScheme> imported = importPidSchemesWithRetry();
     schemes.clear();
-    schemes.addAll(importPidSchemesWithRetry());
+    schemes.addAll(imported);
   }
 
   /**
@@ -181,7 +181,7 @@ public final class PidSchemeVocabularyCached {
     if (!schemes.isEmpty()) {
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
           Duration.ofMillis(System.currentTimeMillis() - lastSuccessfulImportTime).toSeconds());
-      return List.copyOf(schemes);
+      return schemes;
     }
 
     throw new NormalizationConfigurationException("Could not import PID schemes after " + MAX_IMPORT_RETRIES + " attempts",
@@ -230,18 +230,18 @@ public final class PidSchemeVocabularyCached {
    * @throws PidSchemeImportException the pid scheme import exception
    */
   private List<PidScheme> loadSchemesFromImporter(PersistentIdentifierSchemeImporter importer) throws PidSchemeImportException {
-    final List<PidScheme> result = new ArrayList<>();
+    final List<PidScheme> importedSchemes = new ArrayList<>();
     for (PidSchemeLoadable pidSchemeLoadable : importer.importPidSchemes()) {
       if (pidSchemeLoadable == null) {
         LOGGER.warn("Skipping null PID scheme from importer");
         continue;
       }
       try {
-        result.add(pidSchemeLoadable.load());
+        importedSchemes.add(pidSchemeLoadable.load());
       } catch (PidSchemeImportException exception) {
         LOGGER.warn("Failed to load individual PID scheme skipping it, continuing with others", exception);
       }
     }
-    return Collections.unmodifiableList(result);
+    return importedSchemes;
   }
 }
