@@ -138,7 +138,7 @@ public final class PidSchemeVocabularyCached {
   private void importPidSchemesWithRetry() throws NormalizationConfigurationException {
     NormalizationConfigurationException lastException = null;
     LOGGER.info("Importing PID schemes");
-    int attempt = 0;
+    int attempt = 1;
     boolean importSuccessful = false;
     while (attempt <= MAX_IMPORT_RETRIES && !importSuccessful) {
       attempt++;
