@@ -10,7 +10,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
@@ -30,8 +29,8 @@ public final class PidSchemeVocabularyCached {
   private static final int MAX_IMPORT_RETRIES = 5;
   private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
 
-  private final List<PidScheme> schemes;
-  private final ReentrantLock importCacheLock;
+  private List<PidScheme> schemes = List.of();
+  private final ReentrantLock importCacheLock = new ReentrantLock();
   private final String sourceUri;
   private volatile long lastSuccessfulImportTime = 0;
 
@@ -55,11 +54,9 @@ public final class PidSchemeVocabularyCached {
       throw new IllegalArgumentException("sourceUri must not be blank");
     }
     this.sourceUri = sourceUri;
-    schemes = new ArrayList<>();
-    importCacheLock = new ReentrantLock();
     // Pre-populate cache on initialization
     try {
-      refreshCache();
+      importPidSchemesWithRetry();
       LOGGER.info("PID scheme vocabulary initialized successfully");
     } catch (NormalizationConfigurationException e) {
       throw new NormalizationConfigurationException("Failed to initialize PID scheme vocabulary during construction", e);
@@ -95,14 +92,12 @@ public final class PidSchemeVocabularyCached {
    * @throws NormalizationConfigurationException the normalization configuration exception
    */
   private List<PidScheme> getAllSchemesFromCache() throws NormalizationConfigurationException {
-    // 1. Fast path: cache is still valid
-    if (isCacheValid()) {
-      return List.copyOf(schemes);
+    // 1. Fast path: cache is still valid, return it directly
+    if (!isCacheValid()) {
+      // 2. Slow path: the cache needs to refresh, use lock to prevent concurrent imports
+      refreshCacheIfNeeded();
     }
-
-    // 2. Slow path: the cache needs to refresh, use lock to prevent concurrent imports
-    refreshCacheIfNeeded();
-    return List.copyOf(schemes);
+    return schemes;
   }
 
   /**
@@ -128,37 +123,28 @@ public final class PidSchemeVocabularyCached {
       if (isCacheValid()) {
         return;
       }
-      refreshCache();
+      importPidSchemesWithRetry();
     } finally {
       importCacheLock.unlock();
     }
   }
 
   /**
-   * Refresh cache.
-   *
-   * @throws NormalizationConfigurationException the normalization configuration exception
-   */
-  private void refreshCache() throws NormalizationConfigurationException {
-    LOGGER.info("Refreshing PID schemes import cache");
-    List<PidScheme> imported = importPidSchemesWithRetry();
-    schemes.clear();
-    schemes.addAll(imported);
-  }
-
-  /**
    * Attempts to import PID schemes with exponential backoff retry logic.
    * Provides better resilience against failures.
    *
-   * @return List of imported schemes
    * @throws NormalizationConfigurationException if all retries fail
    */
-  private List<PidScheme> importPidSchemesWithRetry() throws NormalizationConfigurationException {
+  private void importPidSchemesWithRetry() throws NormalizationConfigurationException {
     NormalizationConfigurationException lastException = null;
-    for (int attempt = 1; attempt <= MAX_IMPORT_RETRIES; attempt++) {
+    LOGGER.info("Importing PID schemes");
+    int attempt = 0;
+    boolean importSuccessful = false;
+    while ( attempt++ <= MAX_IMPORT_RETRIES && !importSuccessful) {
       try {
         LOGGER.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
-        return importPidSchemes();
+        schemes = List.copyOf(importPidSchemes());
+        importSuccessful = true;
       } catch (NormalizationConfigurationException exception) {
         lastException = exception;
         if (attempt < MAX_IMPORT_RETRIES) {
@@ -177,14 +163,14 @@ public final class PidSchemeVocabularyCached {
       }
     }
 
-    if (!schemes.isEmpty()) {
+    if (attempt >= MAX_IMPORT_RETRIES) {
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
           Duration.ofMillis(System.currentTimeMillis() - lastSuccessfulImportTime).toSeconds());
-      return schemes;
+      if (schemes.isEmpty()) {
+        throw new NormalizationConfigurationException("Could not import PID schemes after " + MAX_IMPORT_RETRIES + " attempts",
+            lastException);
+      }
     }
-
-    throw new NormalizationConfigurationException("Could not import PID schemes after " + MAX_IMPORT_RETRIES + " attempts",
-        lastException);
   }
 
   /**

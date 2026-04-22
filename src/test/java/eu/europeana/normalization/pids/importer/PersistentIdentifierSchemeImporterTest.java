@@ -211,10 +211,10 @@ class PersistentIdentifierSchemeImporterTest {
   }
 
   /**
-   * Test that loading a scheme through PidSchemeLoadable succeeds.
+   * Test that loading a scheme through the PidScheme importer succeeds.
    */
   @Test
-  void testLoadPidSchemeViaLoadable() throws Exception {
+  void testLoadPidSchemeViaImporter() throws Exception {
     // Given
     Location mockLocation = mock(Location.class);
     String singleConfig = """
@@ -246,7 +246,7 @@ class PersistentIdentifierSchemeImporterTest {
   }
 
   /**
-   * Test that loading a scheme throws exception when XML file cannot be read.
+   * Test that loading a scheme throws an exception when an XML file cannot be read.
    */
   @Test
   void testLoadPidSchemeXmlReadFailure() throws Exception {
