@@ -28,42 +28,10 @@ public final class PidSchemeVocabularyCached {
   private static final String URI_SCHEME = "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/config/pid_directory.yaml";
   private static final int MAX_IMPORT_RETRIES = 5;
   private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
-
-  private List<PidScheme> schemes = List.of();
   private final ReentrantLock importCacheLock = new ReentrantLock();
   private final String sourceUri;
+  private List<PidScheme> schemes = List.of();
   private volatile long lastSuccessfulImportTime = 0;
-
-  /**
-   * Gets instance.
-   *
-   * @return the instance
-   */
-  public static PidSchemeVocabularyCached getInstance() {
-    return PidSchemeVocabularyCacheHelper.INSTANCE;
-  }
-
-  /**
-   * The type Pid scheme vocabulary cache helper.
-   */
-  private static class PidSchemeVocabularyCacheHelper {
-
-    private static final PidSchemeVocabularyCached INSTANCE = initVocabulary();
-
-    /**
-     * Init vocabulary pid scheme vocabulary cached.
-     *
-     * @return the pid scheme vocabulary cached
-     */
-    private static PidSchemeVocabularyCached initVocabulary() {
-      try {
-        return new PidSchemeVocabularyCached();
-      } catch (NormalizationConfigurationException e) {
-        throw new ExceptionInInitializerError("Failed to initialize PID scheme vocabulary cache: " + e.getMessage());
-      }
-    }
-
-  }
 
   /**
    * Instantiates new Pid scheme vocabulary cached.
@@ -92,6 +60,15 @@ public final class PidSchemeVocabularyCached {
     } catch (NormalizationConfigurationException e) {
       throw new NormalizationConfigurationException("Failed to initialize PID scheme vocabulary during construction", e);
     }
+  }
+
+  /**
+   * Gets instance.
+   *
+   * @return the instance
+   */
+  public static PidSchemeVocabularyCached getInstance() {
+    return PidSchemeVocabularyCacheHelper.INSTANCE;
   }
 
   /**
@@ -236,6 +213,28 @@ public final class PidSchemeVocabularyCached {
       throw new NormalizationConfigurationException("Could not parse PID schemes URI: " + sourceUri, exception);
     } catch (PidSchemeImportException e) {
       throw new NormalizationConfigurationException("Could not import PID schemes from remote source", e);
+    }
+  }
+
+  /**
+   * The type Pid scheme vocabulary cache helper.
+   */
+  private static class PidSchemeVocabularyCacheHelper {
+
+    private static final PidSchemeVocabularyCached INSTANCE = initVocabulary();
+
+    /**
+     * Init vocabulary pid scheme vocabulary cached.
+     *
+     * @return the pid scheme vocabulary cached
+     */
+    private static PidSchemeVocabularyCached initVocabulary() {
+      try {
+        return new PidSchemeVocabularyCached();
+      } catch (NormalizationConfigurationException e) {
+        LOGGER.error("Failed to initialize PID scheme vocabulary cache", e);
+        return null;
+      }
     }
   }
 }
