@@ -35,11 +35,42 @@ public final class PidSchemeVocabularyCached {
   private volatile long lastSuccessfulImportTime = 0;
 
   /**
+   * Gets instance.
+   *
+   * @return the instance
+   */
+  public static PidSchemeVocabularyCached getInstance() {
+    return PidSchemeVocabularyCacheHelper.INSTANCE;
+  }
+
+  /**
+   * The type Pid scheme vocabulary cache helper.
+   */
+  private static class PidSchemeVocabularyCacheHelper {
+
+    private static final PidSchemeVocabularyCached INSTANCE = initVocabulary();
+
+    /**
+     * Init vocabulary pid scheme vocabulary cached.
+     *
+     * @return the pid scheme vocabulary cached
+     */
+    private static PidSchemeVocabularyCached initVocabulary() {
+      try {
+        return new PidSchemeVocabularyCached();
+      } catch (NormalizationConfigurationException e) {
+        throw new ExceptionInInitializerError("Failed to initialize PID scheme vocabulary cache: " + e.getMessage());
+      }
+    }
+
+  }
+
+  /**
    * Instantiates new Pid scheme vocabulary cached.
    *
    * @throws NormalizationConfigurationException the normalization configuration exception
    */
-  public PidSchemeVocabularyCached() throws NormalizationConfigurationException {
+  private PidSchemeVocabularyCached() throws NormalizationConfigurationException {
     this(URI_SCHEME);
   }
 
