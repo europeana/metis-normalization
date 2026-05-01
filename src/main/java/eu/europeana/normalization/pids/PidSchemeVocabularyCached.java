@@ -11,6 +11,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +31,7 @@ public final class PidSchemeVocabularyCached {
   private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
   private final ReentrantLock importCacheLock = new ReentrantLock();
   private final String sourceUri;
-  private List<PidScheme> schemes = List.of();
+  private final AtomicReference<List<PidScheme>> schemes = new AtomicReference<>(List.of());
   private volatile long lastSuccessfulImportTime = 0;
 
   /**
@@ -105,7 +106,7 @@ public final class PidSchemeVocabularyCached {
       // 2. Slow path: the cache needs to refresh, use lock to prevent concurrent imports
       refreshCacheIfNeeded();
     }
-    return schemes;
+    return schemes.get();
   }
 
   /**
@@ -114,7 +115,7 @@ public final class PidSchemeVocabularyCached {
    * @return the boolean
    */
   private boolean isCacheValid() {
-    return !schemes.isEmpty() && (System.currentTimeMillis() - lastSuccessfulImportTime) <= IMPORT_CACHE_TTL_HOUR;
+    return !schemes.get().isEmpty() && (System.currentTimeMillis() - lastSuccessfulImportTime) <= IMPORT_CACHE_TTL_HOUR;
   }
 
   /**
@@ -152,7 +153,7 @@ public final class PidSchemeVocabularyCached {
       attempt++;
       try {
         LOGGER.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
-        schemes = List.copyOf(importPidSchemes());
+        schemes.set(List.copyOf(importPidSchemes()));
         importSuccessful = true;
       } catch (NormalizationConfigurationException exception) {
         lastException = exception;
@@ -175,7 +176,7 @@ public final class PidSchemeVocabularyCached {
     if (!importSuccessful) {
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
           Duration.ofMillis(System.currentTimeMillis() - lastSuccessfulImportTime).toSeconds());
-      if (schemes.isEmpty()) {
+      if (schemes.get().isEmpty()) {
         throw new NormalizationConfigurationException("Could not import PID schemes after " + MAX_IMPORT_RETRIES + " attempts",
             lastException);
       }
