@@ -222,19 +222,14 @@ public final class PidSchemeVocabularyCached {
    */
   private static class PidSchemeVocabularyCacheHelper {
 
-    private static final PidSchemeVocabularyCached INSTANCE = initVocabulary();
+    private static final PidSchemeVocabularyCached INSTANCE;
 
-    /**
-     * Init vocabulary pid scheme vocabulary cached.
-     *
-     * @return the pid scheme vocabulary cached
-     */
-    private static PidSchemeVocabularyCached initVocabulary() {
+    static {
       try {
-        return new PidSchemeVocabularyCached();
+        INSTANCE = new PidSchemeVocabularyCached();
       } catch (NormalizationConfigurationException e) {
-        LOGGER.error("Failed to initialize PID scheme vocabulary cache", e);
-        return null;
+        LOGGER.error("Failed to initialize PidSchemeVocabularyCached", e);
+        throw new IllegalStateException("Initialization of PidSchemeVocabularyCached failed.", e);
       }
     }
   }
