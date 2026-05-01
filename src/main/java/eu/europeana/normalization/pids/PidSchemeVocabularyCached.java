@@ -29,8 +29,8 @@ public final class PidSchemeVocabularyCached {
   private static final String URI_SCHEME = "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/config/pid_directory.yaml";
   private static final int MAX_IMPORT_RETRIES = 5;
   private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
-  private final ReentrantLock importCacheLock = new ReentrantLock();
   private final String sourceUri;
+  private final ReentrantLock importCacheLock = new ReentrantLock();
   private final AtomicReference<List<PidScheme>> schemes = new AtomicReference<>(List.of());
   private volatile long lastSuccessfulImportTime = 0;
 
@@ -49,7 +49,7 @@ public final class PidSchemeVocabularyCached {
    * @param sourceUri the source uri
    * @throws NormalizationConfigurationException the normalization configuration exception
    */
-  PidSchemeVocabularyCached(String sourceUri) throws NormalizationConfigurationException {
+   private PidSchemeVocabularyCached(String sourceUri) throws NormalizationConfigurationException {
     if (sourceUri == null || sourceUri.isBlank()) {
       throw new IllegalArgumentException("sourceUri must not be blank");
     }
@@ -150,7 +150,6 @@ public final class PidSchemeVocabularyCached {
     int attempt = 1;
     boolean importSuccessful = false;
     while (attempt <= MAX_IMPORT_RETRIES && !importSuccessful) {
-      attempt++;
       try {
         LOGGER.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
         schemes.set(List.copyOf(importPidSchemes()));
@@ -171,6 +170,7 @@ public final class PidSchemeVocabularyCached {
           LOGGER.error("PID scheme import failed after {} attempts", MAX_IMPORT_RETRIES, exception);
         }
       }
+      attempt++;
     }
 
     if (!importSuccessful) {

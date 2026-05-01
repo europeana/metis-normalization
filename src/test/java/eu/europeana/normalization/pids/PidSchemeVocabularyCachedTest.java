@@ -18,6 +18,8 @@ import com.github.tomakehurst.wiremock.http.JvmProxyConfigurer;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,10 +33,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import sun.misc.Unsafe;
 
 class PidSchemeVocabularyCachedTest {
 
   private static PidSchemeVocabularyCached vocabulary;
+  private static PidSchemeVocabularyCached originalVocabulary;
   private static final String TEST_PID_ARK = "ark:/12148/bpt6k279983";
   private static final String TEST_PID_URN = "urn:nbn:nl:ui:29-8f66e0a8-b7c9-40a4-be28-54a7c0177061";
   private static WireMockServer wireMockServer;
@@ -63,13 +67,60 @@ class PidSchemeVocabularyCachedTest {
         .atPriority(1)
         .willReturn(ok().withBody(loadResourceContent("scheme_b.rdf"))));
 
-    vocabulary = new PidSchemeVocabularyCached(sourceUri);
+    // Store the original singleton instance
+    originalVocabulary = PidSchemeVocabularyCached.getInstance();
+
+    // Create a new test-specific vocabulary instance with the test URL
+    vocabulary = createTestVocabulary(sourceUri);
+
+    // Replace the singleton with the test instance
+    replaceVocabularySingleton(vocabulary);
   }
 
   @AfterAll
-  static void tearDown() {
+  static void tearDown() throws NormalizationConfigurationException {
+    // Restore the original singleton instance
+    replaceVocabularySingleton(originalVocabulary);
+
     JvmProxyConfigurer.restorePrevious();
     wireMockServer.stop();
+  }
+
+  private static PidSchemeVocabularyCached createTestVocabulary(String sourceUri) throws NormalizationConfigurationException {
+    try {
+      Constructor<PidSchemeVocabularyCached> constructor =
+          PidSchemeVocabularyCached.class.getDeclaredConstructor(String.class);
+      constructor.setAccessible(true);
+      return constructor.newInstance(sourceUri);
+    } catch (Exception e) {
+      throw new NormalizationConfigurationException("Failed to create test vocabulary instance", e);
+    }
+  }
+
+  private static void replaceVocabularySingleton(PidSchemeVocabularyCached newInstance) throws NormalizationConfigurationException {
+    try {
+      // Access the inner class PidSchemeVocabularyCacheHelper
+      Class<?> helperClass = Class.forName("eu.europeana.normalization.pids.PidSchemeVocabularyCached$PidSchemeVocabularyCacheHelper");
+      Field instanceField = helperClass.getDeclaredField("INSTANCE");
+
+      // In Java 21, reflection cannot modify final static fields due to strict enforcement of finality.
+      // We must use Unsafe to directly modify memory. This is the only reliable approach.
+      // The deprecated methods in Unsafe are the best available option for Java 21 compatibility.
+      Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
+      unsafeField.setAccessible(true);
+      @SuppressWarnings("all")
+      Unsafe unsafe = (Unsafe) unsafeField.get(null);
+
+      // Use Unsafe to replace the final static field
+      @SuppressWarnings("deprecation")
+      long offset = unsafe.staticFieldOffset(instanceField);
+      @SuppressWarnings("deprecation")
+      Object base = unsafe.staticFieldBase(instanceField);
+
+      unsafe.putObject(base, offset, newInstance);
+    } catch (Exception e) {
+      throw new NormalizationConfigurationException("Failed to replace vocabulary singleton", e);
+    }
   }
 
   private static String loadResourceContent(String value) throws IOException {
