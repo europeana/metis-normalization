@@ -46,6 +46,8 @@ class PidSchemeVocabularyCachedTest {
   @BeforeAll
   static void setUp() throws NormalizationConfigurationException, IOException {
     String sourceUri = "http://metis-normalization-github.test/directory.yaml";
+    // Store the original singleton instance
+    originalVocabulary = PidSchemeVocabularyCached.getInstance();
     wireMockServer = new WireMockServer(wireMockConfig()
         .dynamicPort()
         .enableBrowserProxying(true)
@@ -67,8 +69,7 @@ class PidSchemeVocabularyCachedTest {
         .atPriority(1)
         .willReturn(ok().withBody(loadResourceContent("scheme_b.rdf"))));
 
-    // Store the original singleton instance
-    originalVocabulary = PidSchemeVocabularyCached.getInstance();
+
 
     // Create a new test-specific vocabulary instance with the test URL
     vocabulary = createTestVocabulary(sourceUri);
