@@ -69,7 +69,7 @@ public enum NormalizerStep {
   /**
    * Normalize PIDs. See {@link PidNormalizer}.
    **/
-  NORMALIZE_PIDS(settings -> new PidNormalizer(new PidSchemeVocabularyCached()));
+  NORMALIZE_PIDS(settings -> new PidNormalizer(PidSchemeVocabularyCached.getInstance()));
 
   private final ActionCreator actionCreator;
 

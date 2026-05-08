@@ -18,6 +18,7 @@ import com.github.tomakehurst.wiremock.http.JvmProxyConfigurer;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,47 +35,26 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class PidSchemeVocabularyCachedTest {
 
-  private static PidSchemeVocabularyCached vocabulary;
   private static final String TEST_PID_ARK = "ark:/12148/bpt6k279983";
   private static final String TEST_PID_URN = "urn:nbn:nl:ui:29-8f66e0a8-b7c9-40a4-be28-54a7c0177061";
+  private static PidSchemeVocabularyCached vocabulary;
   private static WireMockServer wireMockServer;
 
-  @BeforeAll
-  static void setUp() throws NormalizationConfigurationException, IOException {
-    String sourceUri = "http://metis-normalization-github.test/directory.yaml";
-    wireMockServer = new WireMockServer(wireMockConfig()
-        .dynamicPort()
-        .enableBrowserProxying(true)
-        .notifier(new ConsoleNotifier(true)));
-    wireMockServer.start();
-
-    JvmProxyConfigurer.configureFor(wireMockServer);
-
-    wireMockServer.stubFor(get(urlEqualTo("/directory.yaml"))
-        .withHost(equalTo("metis-normalization-github.test"))
-        .atPriority(1)
-        .willReturn(ok().withBody(loadResourceContent("directory.yaml"))));
-    wireMockServer.stubFor(get(urlEqualTo("/scheme_a.rdf"))
-        .withHost(equalTo("metis-normalization-github.test"))
-        .atPriority(1)
-        .willReturn(ok().withBody(loadResourceContent("scheme_a.rdf"))));
-    wireMockServer.stubFor(get(urlEqualTo("/scheme_b.rdf"))
-        .withHost(equalTo("metis-normalization-github.test"))
-        .atPriority(1)
-        .willReturn(ok().withBody(loadResourceContent("scheme_b.rdf"))));
-
-    vocabulary = new PidSchemeVocabularyCached(sourceUri);
-  }
-
-  @AfterAll
-  static void tearDown() {
-    JvmProxyConfigurer.restorePrevious();
-    wireMockServer.stop();
+  private static PidSchemeVocabularyCached createTestVocabulary(String sourceUri) throws NormalizationConfigurationException {
+    try {
+      Constructor<PidSchemeVocabularyCached> constructor =
+          PidSchemeVocabularyCached.class.getDeclaredConstructor(String.class);
+      constructor.setAccessible(true);
+      return constructor.newInstance(sourceUri);
+    } catch (Exception e) {
+      throw new NormalizationConfigurationException("Failed to create test vocabulary instance", e);
+    }
   }
 
   private static String loadResourceContent(String value) throws IOException {
     String resource = "";
-    try (InputStream inputStream = PidSchemeVocabularyCachedTest.class.getClassLoader().getResourceAsStream("pidTestSchemes/"+value)) {
+    try (InputStream inputStream = PidSchemeVocabularyCachedTest.class.getClassLoader()
+                                                                      .getResourceAsStream("pidTestSchemes/" + value)) {
       resource = new String(Objects.requireNonNull(inputStream).readAllBytes());
     }
     return resource;
@@ -105,6 +85,41 @@ class PidSchemeVocabularyCachedTest {
         Arguments.of("   ", null, null), //whitespace-only string is not a valid pid
         Arguments.of(null, null, NullPointerException.class) // null pid is not a valid pid
     );
+  }
+
+  @BeforeAll
+  static void setUp() throws NormalizationConfigurationException, IOException {
+    String sourceUri = "http://metis-normalization-github.test/directory.yaml";
+
+    wireMockServer = new WireMockServer(wireMockConfig()
+        .dynamicPort()
+        .enableBrowserProxying(true)
+        .notifier(new ConsoleNotifier(true)));
+    wireMockServer.start();
+
+    JvmProxyConfigurer.configureFor(wireMockServer);
+
+    wireMockServer.stubFor(get(urlEqualTo("/directory.yaml"))
+        .withHost(equalTo("metis-normalization-github.test"))
+        .atPriority(1)
+        .willReturn(ok().withBody(loadResourceContent("directory.yaml"))));
+    wireMockServer.stubFor(get(urlEqualTo("/scheme_a.rdf"))
+        .withHost(equalTo("metis-normalization-github.test"))
+        .atPriority(1)
+        .willReturn(ok().withBody(loadResourceContent("scheme_a.rdf"))));
+    wireMockServer.stubFor(get(urlEqualTo("/scheme_b.rdf"))
+        .withHost(equalTo("metis-normalization-github.test"))
+        .atPriority(1)
+        .willReturn(ok().withBody(loadResourceContent("scheme_b.rdf"))));
+
+    // Create a new test-specific vocabulary instance with the test URL
+    vocabulary = createTestVocabulary(sourceUri);
+  }
+
+  @AfterAll
+  static void tearDown() {
+    JvmProxyConfigurer.restorePrevious();
+    wireMockServer.stop();
   }
 
   @ParameterizedTest
@@ -311,7 +326,7 @@ class PidSchemeVocabularyCachedTest {
   }
 
   @Test
-  void testSchemeConsistency()  {
+  void testSchemeConsistency() {
     // Given Multiple retrievals of matcher should produce consistent results
     // When
     PidMatchResult result1 = vocabulary.matchPid(TEST_PID_ARK);
@@ -340,7 +355,6 @@ class PidSchemeVocabularyCachedTest {
 
   @Test
   void testUrlPidFormatVariations() {
-
 
     // When & Then Test different URL variations
     // Test ARK with https URL
