@@ -24,7 +24,7 @@
     <version.maven.release.plugin>2.5.3</version.maven.release.plugin>
 
     <!--Internal-->
-    <version.metis-schema>14</version.metis-schema>
+    <version.metis-schema>15-SNAPSHOT</version.metis-schema>
 
     <!--External-->
     <version.spring.boot>4.0.1</version.spring.boot>
