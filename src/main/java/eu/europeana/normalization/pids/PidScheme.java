@@ -72,7 +72,7 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
     // Try to match against any of the defined patterns. Otherwise, we are done.
     final Matcher successfulMatcher = matchingPatterns.stream()
         .map(pattern -> pattern.matcher(pid))
-        .filter(Matcher::matches).findFirst().orElse(null);
+        .filter(Matcher::find).findFirst().orElse(null);
     if (successfulMatcher == null) {
       return null;
     }
