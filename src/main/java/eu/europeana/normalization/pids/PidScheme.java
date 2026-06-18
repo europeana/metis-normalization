@@ -1,6 +1,7 @@
 package eu.europeana.normalization.pids;
 
-import eu.europeana.normalization.pids.PersistentIdentifierScheme.Resource;
+import eu.europeana.normalization.pids.model.PersistentIdentifierScheme;
+import eu.europeana.normalization.pids.model.PersistentIdentifierScheme.Resource;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
