@@ -7,11 +7,12 @@ import eu.europeana.metis.schema.jibx.LiteralType;
 import eu.europeana.metis.schema.jibx.Notation;
 import eu.europeana.metis.schema.jibx.PersistentIdentifierType;
 import eu.europeana.metis.schema.jibx.RDF;
+import eu.europeana.metis.schema.jibx.ResourceType;
 import eu.europeana.metis.schema.jibx.Value;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -67,21 +68,35 @@ public class NormalizedPids {
       result.setAbout(computeNextPidAbout());
       result.setValue(new Value());
       result.getValue().setString(normalization.canonicalPid());
-      result.setHasURLList(List.of(new HasURL()));
-      result.getHasURLList().getFirst().setResource(normalization.resolvablePid());
       result.setInScheme(new InScheme());
       result.getInScheme().setResource(normalization.scheme().getSchemeId());
       normalizedPidsById.put(result.getAbout(), result);
       return result;
     });
 
+    // Add the resolvable PID if it doesn't already exist.
+    final boolean addResolvablePidAsHasUrl = Optional.ofNullable(pid.getHasURLList()).stream()
+        .flatMap(Collection::stream).filter(Objects::nonNull)
+        .map(ResourceType::getResource).filter(Objects::nonNull)
+        .noneMatch(normalization.resolvablePid()::equals);
+    if (addResolvablePidAsHasUrl) {
+      if (pid.getHasURLList() == null) {
+        pid.setHasURLList(new ArrayList<>());
+      }
+      final HasURL hasUrl = new HasURL();
+      hasUrl.setResource(normalization.resolvablePid());
+      pid.getHasURLList().add(hasUrl);
+    }
+
     // Add the original, unnormalized pid as a notation if different from the canonical or
     // resolvable one (and if it doesn't already exist as a notation).
     final boolean addOriginalPidAsNotation =
         !normalization.originalPid().equals(normalization.canonicalPid()) &&
             !normalization.originalPid().equals(normalization.resolvablePid()) &&
-            Optional.ofNullable(pid.getNotationList()).stream().flatMap(Collection::stream)
-                .map(LiteralType::getString).noneMatch(normalization.originalPid()::equals);
+            Optional.ofNullable(pid.getNotationList()).stream()
+                .flatMap(Collection::stream).filter(Objects::nonNull)
+                .map(LiteralType::getString).filter(Objects::nonNull)
+                .noneMatch(normalization.originalPid()::equals);
     if (addOriginalPidAsNotation) {
       if (pid.getNotationList() == null) {
         pid.setNotationList(new ArrayList<>());
