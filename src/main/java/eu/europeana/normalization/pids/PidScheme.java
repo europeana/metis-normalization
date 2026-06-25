@@ -82,12 +82,7 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
     if (this.canonicalPattern == null) {
       return pid;
     }
-    String result = this.canonicalPattern;
-    for (int grp = 1; grp <= successfulMatcher.groupCount(); grp++) {
-      result = result.replace("${" + grp + "}",
-          Optional.ofNullable(successfulMatcher.group(grp)).orElse(""));
-    }
-    return result;
+    return RegexUtils.copyGroupsToTemplate(successfulMatcher, this.canonicalPattern);
   }
 
   /**
