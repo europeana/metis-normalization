@@ -1,5 +1,7 @@
 package eu.europeana.normalization.pids;
 
+import eu.europeana.normalization.pids.RegexUtils.MatchedSegment;
+import eu.europeana.normalization.pids.RegexUtils.OptimalMatch;
 import eu.europeana.normalization.pids.model.PersistentIdentifierScheme;
 import eu.europeana.normalization.pids.model.PersistentIdentifierScheme.Resource;
 import java.util.Collection;
@@ -67,20 +69,18 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
    *
    * @param input The input string from which to extract PIDs.
    * @return A matcher based on one of the matching patterns that was found to match the input.
-   * Returns null if no pattern matched.
+   * Returns <code>null</code> if no pattern matched.
    */
   private Matcher getSuccessfulMatch(String input) {
-    Matcher bestMatcher = null;
+    final OptimalMatch<Matcher> optimalMatch = new OptimalMatch<>(matcher ->
+        new MatchedSegment(matcher.start(), matcher.end()));
     for (Pattern pattern : matchingPatterns) {
       final Matcher matcher = pattern.matcher(input);
       if (matcher.find()) {
-        if (bestMatcher == null || bestMatcher.start() > matcher.start()
-            || ((bestMatcher.start() == matcher.start()) && (bestMatcher.end() < matcher.end()))) {
-          bestMatcher = matcher;
-        }
+        optimalMatch.submitAlternative(matcher);
       }
     }
-    return bestMatcher;
+    return optimalMatch.getCurrentOptimum();
   }
 
   /**

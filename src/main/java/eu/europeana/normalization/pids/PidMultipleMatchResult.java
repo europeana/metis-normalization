@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 /**
  * Multiple matches of the same PID against the same scheme in the vocabulary.
  */
-public class PidMultipleMatchResult {
+public final class PidMultipleMatchResult {
 
   private final PidSchemeInfo scheme;
   private final String canonicalPid;

@@ -26,12 +26,12 @@ public class NormalizedPids {
   private final Map<String, PersistentIdentifierType> normalizedPidsById;
 
   /**
-   * Constructor.
+   * Constructor: initializes this class with all normalized PIDs in the record.
    *
-   * @param record Initializes this class with all normalized PIDs in the record.
+   * @param edmRecord The record from which to obtain the normalized PIDs.
    */
-  public NormalizedPids(RDF record) {
-    this.normalizedPidsById = Optional.ofNullable(record.getPersistentIdentifierList())
+  public NormalizedPids(RDF edmRecord) {
+    this.normalizedPidsById = Optional.ofNullable(edmRecord.getPersistentIdentifierList())
         .stream().flatMap(Collection::stream)
         .collect(Collectors.toMap(AboutType::getAbout, Function.identity()));
   }
@@ -39,10 +39,10 @@ public class NormalizedPids {
   /**
    * Write this collection to the record. All existing PID objects are removed/overwritten.
    *
-   * @param record The record to which to write the collection.
+   * @param edmRecord The record to which to write the collection.
    */
-  public void writeToRecord(RDF record) {
-    record.setPersistentIdentifierList(new ArrayList<>(normalizedPidsById.values()));
+  public void writeToRecord(RDF edmRecord) {
+    edmRecord.setPersistentIdentifierList(new ArrayList<>(normalizedPidsById.values()));
   }
 
   /**

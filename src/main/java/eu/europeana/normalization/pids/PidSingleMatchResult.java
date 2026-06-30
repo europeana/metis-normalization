@@ -1,5 +1,7 @@
 package eu.europeana.normalization.pids;
 
+import eu.europeana.normalization.pids.RegexUtils.MatchedSegment;
+
 /**
  * A single match of a PID against a PID scheme in the vocabulary.
  *
@@ -13,4 +15,7 @@ package eu.europeana.normalization.pids;
 public record PidSingleMatchResult(PidSchemeInfo scheme, String canonicalPid, String resolvablePid,
                                    String originalPid, int start, int end) {
 
+  public MatchedSegment getMatchedSegment() {
+    return new MatchedSegment(start, end);
+  }
 }

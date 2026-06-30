@@ -1,5 +1,6 @@
 package eu.europeana.normalization.pids;
 
+import eu.europeana.normalization.pids.RegexUtils.OptimalMatch;
 import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImporter;
 import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImporterFactory;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
@@ -83,17 +84,10 @@ public final class PidSchemeVocabularyCached {
    */
   private PidSingleMatchResult findBestMatch(String input)
       throws NormalizationConfigurationException {
-    PidSingleMatchResult bestMatch = null;
-    for (PidScheme pidScheme : getAllSchemesFromCache()) {
-      final PidSingleMatchResult thisMatch = pidScheme.match(input);
-      if (thisMatch != null) {
-        if (bestMatch == null || bestMatch.start() > thisMatch.start()
-            || ((bestMatch.start() == thisMatch.start()) && (bestMatch.end() < thisMatch.end()))) {
-          bestMatch = thisMatch;
-        }
-      }
-    }
-    return bestMatch;
+    final OptimalMatch<PidSingleMatchResult> bestMatch = new OptimalMatch<>(
+        PidSingleMatchResult::getMatchedSegment);
+    getAllSchemesFromCache().forEach(scheme -> bestMatch.submitAlternative(scheme.match(input)));
+    return bestMatch.getCurrentOptimum();
   }
 
   /**

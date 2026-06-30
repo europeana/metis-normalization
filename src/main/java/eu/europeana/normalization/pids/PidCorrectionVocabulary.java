@@ -9,7 +9,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.io.IOUtils;
 import tools.jackson.databind.ObjectMapper;
@@ -22,7 +21,8 @@ import tools.jackson.dataformat.yaml.YAMLFactory;
  */
 public final class PidCorrectionVocabulary {
 
-  private static final String VOCABULARY_FILE = "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/public/scheme/pid/normalization.yml";
+  private static final String VOCABULARY_FILE =
+      "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/public/scheme/pid/normalization.yml";
 
   private static PidCorrectionVocabulary instance;
 
@@ -41,7 +41,7 @@ public final class PidCorrectionVocabulary {
         pidCorrections = Stream.of(pidCorrectionList)
             .map(correction -> new PidCorrection(correction.getMatch(), false,
                 correction.getReplace()))
-            .collect(Collectors.toList());
+            .toList();
       }
     } catch (URISyntaxException | IOException exception) {
       throw new NormalizationConfigurationException("Could not parse PID schemes URI: " +
