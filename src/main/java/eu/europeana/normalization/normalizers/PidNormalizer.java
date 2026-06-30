@@ -15,7 +15,7 @@ import eu.europeana.normalization.model.NormalizeActionResult;
 import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.pids.NormalizedPids;
 import eu.europeana.normalization.pids.PidCorrectionVocabulary;
-import eu.europeana.normalization.pids.PidMatchResult;
+import eu.europeana.normalization.pids.PidMultipleMatchResult;
 import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import eu.europeana.normalization.util.NormalizationException;
@@ -66,11 +66,9 @@ public class PidNormalizer implements RecordNormalizeAction {
     final NormalizedPids normalizedPids = new NormalizedPids(rdf);
 
     // Go by each proxy.
-    final List<ProxyType> proxies = Optional.ofNullable(rdf.getProxyList()).stream()
-        .flatMap(Collection::stream).toList();
-    for (ProxyType proxy : proxies) {
-      normalizePidsInProxy(proxy, normalizedPids, report);
-    }
+    Optional.ofNullable(rdf.getProxyList()).stream().flatMap(Collection::stream)
+        .filter(Objects::nonNull)
+        .forEach(proxy -> normalizePidsInProxy(proxy, normalizedPids, report));
 
     // Override all the normalized PIDs and PID schemes in the record as new ones were added.
     normalizedPids.writeToRecord(rdf);
@@ -208,7 +206,7 @@ public class PidNormalizer implements RecordNormalizeAction {
     for (Pid nonNormalizedPid : nonNormalizedPidsInProxy) {
 
       // Normalize the PID. If we can't, add the PID directly as a result.
-      final PidMatchResult normalization = pidSchemeVocabulary.matchPid(
+      final PidMultipleMatchResult normalization = pidSchemeVocabulary.matchPid(
           nonNormalizedPid.getString());
       if (normalization == null) {
         resultPidsInProxy.add(nonNormalizedPid);

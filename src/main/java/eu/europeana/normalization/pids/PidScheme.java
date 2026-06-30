@@ -61,45 +61,53 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
   }
 
   /**
-   * Transforms a PID string into its canonical form.
+   * Tries to find one of the patterns in the provided input. If multiple patterns are matched,
+   * we try to find the one that matches as early in the input as possible. If there is still
+   * a tie, we try to find the longest match.
    *
-   * @param pid a valid PID string of this scheme. Cannot be null.
-   * @return the canonical form of the PID. If the PID is already in its canonical form, or this
-   * scheme does not have a canonical form, then the same PID is returned. If the PID does not match
-   * this scheme, <code>null</code> is returned.
+   * @param input The input string from which to extract PIDs.
+   * @return A matcher based on one of the matching patterns that was found to match the input.
+   * Returns null if no pattern matched.
    */
-  private String getCanonicalForm(String pid) {
-
-    // Try to match against any of the defined patterns. Otherwise, we are done.
-    final Matcher successfulMatcher = matchingPatterns.stream()
-        .map(pattern -> pattern.matcher(pid))
-        .filter(Matcher::find).findFirst().orElse(null);
-    if (successfulMatcher == null) {
-      return null;
+  private Matcher getSuccessfulMatch(String input) {
+    Matcher bestMatcher = null;
+    for (Pattern pattern : matchingPatterns) {
+      final Matcher matcher = pattern.matcher(input);
+      if (matcher.find()) {
+        if (bestMatcher == null || bestMatcher.start() > matcher.start()
+            || ((bestMatcher.start() == matcher.start()) && (bestMatcher.end() < matcher.end()))) {
+          bestMatcher = matcher;
+        }
+      }
     }
-
-    // Construct the canonical form based on the matched pattern.
-    if (this.canonicalPattern == null) {
-      return pid;
-    }
-    return RegexUtils.copyGroupsToTemplate(successfulMatcher, this.canonicalPattern);
+    return bestMatcher;
   }
 
   /**
    * Match a PID against this scheme.
    *
-   * @param pid The PID to match.
+   * @param input The PID to match.
    * @return The match result. Is <code>null</code> exactly if the PID does not match this scheme.
    */
-  public PidMatchResult match(String pid) {
-    final String trimmedPid = Objects.requireNonNull(pid, "pid must not be null").trim();
-    final String canonicalForm = getCanonicalForm(trimmedPid);
-    if (canonicalForm == null) {
+  public PidSingleMatchResult match(String input) {
+
+    // Try to find a match. If we fail, we are done.
+    final Matcher match = getSuccessfulMatch(input);
+    if (match == null) {
       return null;
     }
+
+    // Extract information from the match.
+    final String originalPid = match.group();
+    final int start = match.start();
+    final int end = match.end();
+    final String canonicalForm = this.canonicalPattern == null ? originalPid :
+        RegexUtils.copyGroupsToTemplate(match, this.canonicalPattern);
+
+    // Compile the result.
     final String resolvableForm = Optional.ofNullable(this.resolvablePattern)
-        .map(pattern -> pattern.replace("${0}", canonicalForm)).orElse(trimmedPid);
-    return new PidMatchResult(this, canonicalForm, resolvableForm, trimmedPid);
+        .map(pattern -> pattern.replace("${0}", canonicalForm)).orElse(originalPid);
+    return new PidSingleMatchResult(this, canonicalForm, resolvableForm, originalPid, start, end);
   }
 
   @Override

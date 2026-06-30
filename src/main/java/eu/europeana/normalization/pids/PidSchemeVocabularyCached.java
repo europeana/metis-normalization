@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -73,23 +74,55 @@ public final class PidSchemeVocabularyCached {
   }
 
   /**
+   * Tries to find a match in any of the schemes. If multiple patterns are matched,
+   * we try to find the one that matches as early in the input as possible. If there is still
+   * a tie, we try to find the longest match.
+   *
+   * @param input The input string from which to extract PIDs.
+   * @return A match result, or <code>null</code> if no match could be found.
+   */
+  private PidSingleMatchResult findBestMatch(String input)
+      throws NormalizationConfigurationException {
+    PidSingleMatchResult bestMatch = null;
+    for (PidScheme pidScheme : getAllSchemesFromCache()) {
+      final PidSingleMatchResult thisMatch = pidScheme.match(input);
+      if (thisMatch != null) {
+        if (bestMatch == null || bestMatch.start() > thisMatch.start()
+            || ((bestMatch.start() == thisMatch.start()) && (bestMatch.end() < thisMatch.end()))) {
+          bestMatch = thisMatch;
+        }
+      }
+    }
+    return bestMatch;
+  }
+
+  /**
    * Attempt to match a PID against the vocabulary.
    *
-   * @param pid The PID to match.
+   * @param input The PID to match.
    * @return The result of the matching. If <code>null</code>, no PID scheme was found to match.
    */
-  public PidMatchResult matchPid(String pid) {
+  public PidMultipleMatchResult matchPid(String input) {
+
+    // Get all PIDs found in the input. Try all schemes repeatedly until no matches are found.
+    String remainingInput = input;
+    final List<PidSingleMatchResult> results = new ArrayList<>();
     try {
-      for (PidScheme pidScheme : getAllSchemesFromCache()) {
-        PidMatchResult pidMatchResult = pidScheme.match(pid);
-        if (pidMatchResult != null) {
-          return pidMatchResult;
+      while (true) {
+        final PidSingleMatchResult bestMatch = findBestMatch(remainingInput);
+        if (bestMatch != null) {
+          results.add(bestMatch);
+          remainingInput = remainingInput.substring(bestMatch.end());
+        } else {
+          break;
         }
       }
     } catch (NormalizationConfigurationException e) {
       LOGGER.error("Failed to match PID against PID scheme vocabulary", e);
     }
-    return null;
+
+    // Compile the result.
+    return PidMultipleMatchResult.forResults(results);
   }
 
   /**
