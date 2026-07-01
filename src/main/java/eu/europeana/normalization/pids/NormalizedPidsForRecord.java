@@ -15,7 +15,6 @@ import eu.europeana.metis.schema.jibx.ResourceType;
 import eu.europeana.metis.schema.jibx.Value;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,15 +25,15 @@ import java.util.stream.Stream;
 
 /**
  * This class maintains a collection of normalized PIDs. It represents all persistent identifier
- * objects in a record. It can be added to and then written to a record.
+ * objects in a record. It can be added to and then written to a record. Note: PIDs that are not
+ * referenced in the record through a <code>edm:pid</code> reference when creating this collection
+ * will be ignored and not be written to a record (except if it is added as a normalized PID
+ * later). This is checked when writing to a record.
  */
 public class NormalizedPidsForRecord {
 
-  // Keeps track of the PIDs encountered in the record that are not (yet) referenced.
-  private final Map<String, PersistentIdentifierType> unreferencedPids;
-
-  // Keeps track of the PIDs that are to be added/retained in the record (i.e., are referenced).
-  private final Map<String, PersistentIdentifierType> referencedPids = new HashMap<>();
+  // The PIDs known in the record, mapped by their about value.
+  private final Map<String, PersistentIdentifierType> normalizedPids;
 
   /**
    * Constructor: initializes this class with all normalized PIDs in the record.
@@ -44,67 +43,24 @@ public class NormalizedPidsForRecord {
   public NormalizedPidsForRecord(RDF edmRecord) {
 
     // Initialize the pre-existing PID map to contain all PIDs.
-    this.unreferencedPids = Optional.ofNullable(edmRecord.getPersistentIdentifierList())
-        .stream().flatMap(Collection::stream)
-        .collect(Collectors.toMap(AboutType::getAbout, Function.identity()));
-
-    // Record all referenced PID objects.
-    final Stream<List<Pid>> pidReferencesInProxy = Optional.ofNullable(edmRecord.getProxyList())
-        .stream().flatMap(Collection::stream).filter(Objects::nonNull)
-        .map(ProxyType::getPidList);
-    pidReferencesInProxy.filter(Objects::nonNull)
+    this.normalizedPids = Optional.ofNullable(edmRecord.getPersistentIdentifierList()).stream()
         .flatMap(Collection::stream).filter(Objects::nonNull)
-        .map(ResourceOrLiteralType::getResource).filter(Objects::nonNull)
-        .map(Resource::getResource).filter(Objects::nonNull)
-        .forEach(this::recordReference);
+        .collect(Collectors.toMap(AboutType::getAbout, Function.identity()));
   }
 
   /**
-   * Called in case we find a reference to a PID. This moves the PID object from the unreferenced
-   * to the referenced PID lists if needed.
-   *
-   * @param pidReference The references.
-   */
-  private void recordReference(String pidReference) {
-    Optional.ofNullable(unreferencedPids.remove(pidReference))
-        .ifPresent(pid -> referencedPids.put(pidReference, pid));
-  }
-
-  /**
-   * Write this collection to the record. All existing PID objects are removed/overwritten.
-   *
-   * @param edmRecord The record to which to write the collection.
-   */
-  public void writeToRecord(RDF edmRecord) {
-    edmRecord.setPersistentIdentifierList(new ArrayList<>(referencedPids.values()));
-  }
-
-  /**
-   * Attempts to find a known PID object by canonical PID value. If we find a pre-existing one, we
-   * notify that a reference has been found.
+   * Attempts to find a known PID object by canonical PID value.
    *
    * @param canonicalPid The canonical PID to match. Is not <code>null</code>.
    * @return The PID object, or <code>null</code> if none is known.
    */
   private PersistentIdentifierType findByCanonicalPid(String canonicalPid) {
-
-    // First check in the already referenced PIDs.
-    for (PersistentIdentifierType candidate : this.referencedPids.values()) {
+    for (PersistentIdentifierType candidate : this.normalizedPids.values()) {
       if (Optional.ofNullable(candidate.getValue()).map(LiteralType::getString)
           .filter(canonicalPid::equals).isPresent()) {
         return candidate;
       }
     }
-
-    // Then check in the non-referenced PIDs.
-    for (PersistentIdentifierType candidate : this.unreferencedPids.values()) {
-      if (Optional.ofNullable(candidate.getValue()).map(LiteralType::getString)
-          .filter(canonicalPid::equals).isPresent()) {
-        return candidate;
-      }
-    }
-
-    // We didn't find the canonical PID.
     return null;
   }
 
@@ -131,7 +87,7 @@ public class NormalizedPidsForRecord {
       result.getValue().setString(normalization.getCanonicalPid());
       result.setInScheme(new InScheme());
       result.getInScheme().setResource(normalization.getScheme().getSchemeId());
-      referencedPids.put(result.getAbout(), result);
+      normalizedPids.put(result.getAbout(), result);
       return result;
     });
 
@@ -171,17 +127,38 @@ public class NormalizedPidsForRecord {
       }
     });
 
-    // Done. Record the new reference.
-    recordReference(pid.getAbout());
+    // Done.
     return pid.getAbout();
   }
 
   private String computeNextPidAbout() {
     for (int i = 0; ; i++) {
       final String proposedId = "#pid_" + i;
-      if (!referencedPids.containsKey(proposedId)) {
+      if (!normalizedPids.containsKey(proposedId)) {
         return proposedId;
       }
     }
+  }
+
+  /**
+   * Write this collection to the record. All existing PID objects are removed/overwritten.
+   *
+   * @param edmRecord The record to which to write the collection.
+   */
+  public void writeToRecord(RDF edmRecord) {
+
+    // Get the list of PID objects referenced from the record.
+    final Stream<List<Pid>> pidReferencesInProxy = Optional
+        .ofNullable(edmRecord.getProxyList()).stream()
+        .flatMap(Collection::stream).filter(Objects::nonNull).map(ProxyType::getPidList);
+    final List<PersistentIdentifierType> referencedPidObjects =
+        pidReferencesInProxy.filter(Objects::nonNull)
+        .flatMap(Collection::stream).filter(Objects::nonNull)
+        .map(ResourceOrLiteralType::getResource).filter(Objects::nonNull)
+        .map(Resource::getResource).filter(Objects::nonNull)
+        .map(this.normalizedPids::get).filter(Objects::nonNull).toList();
+
+    // Write the referenced PID objects to the record.
+    edmRecord.setPersistentIdentifierList(referencedPidObjects);
   }
 }
