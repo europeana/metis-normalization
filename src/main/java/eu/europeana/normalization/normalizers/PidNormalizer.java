@@ -1,8 +1,10 @@
 package eu.europeana.normalization.normalizers;
 
+import eu.europeana.metis.schema.jibx.AboutType;
 import eu.europeana.metis.schema.jibx.Aggregation;
 import eu.europeana.metis.schema.jibx.EuropeanaType;
 import eu.europeana.metis.schema.jibx.EuropeanaType.Choice;
+import eu.europeana.metis.schema.jibx.HasMimeType;
 import eu.europeana.metis.schema.jibx.Identifier;
 import eu.europeana.metis.schema.jibx.LiteralType;
 import eu.europeana.metis.schema.jibx.Pid;
@@ -10,10 +12,11 @@ import eu.europeana.metis.schema.jibx.ProxyType;
 import eu.europeana.metis.schema.jibx.RDF;
 import eu.europeana.metis.schema.jibx.ResourceOrLiteralType.Resource;
 import eu.europeana.metis.schema.jibx.ResourceType;
+import eu.europeana.metis.schema.jibx.WebResourceType;
 import eu.europeana.normalization.model.ConfidenceLevel;
 import eu.europeana.normalization.model.NormalizeActionResult;
 import eu.europeana.normalization.model.RecordWrapper;
-import eu.europeana.normalization.pids.NormalizedPids;
+import eu.europeana.normalization.pids.NormalizedPidsForRecord;
 import eu.europeana.normalization.pids.PidCorrectionVocabulary;
 import eu.europeana.normalization.pids.PidMultipleMatchResult;
 import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
@@ -30,7 +33,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * This is a normalizer for PID values.
@@ -63,12 +69,10 @@ public class PidNormalizer implements RecordNormalizeAction {
     correctDcIdentifiers(rdf, report);
 
     // Set up the collection of normalized PIDs.
-    final NormalizedPids normalizedPids = new NormalizedPids(rdf);
+    final NormalizedPidsForRecord normalizedPids = new NormalizedPidsForRecord(rdf);
 
-    // Go by each proxy.
-    Optional.ofNullable(rdf.getProxyList()).stream().flatMap(Collection::stream)
-        .filter(Objects::nonNull)
-        .forEach(proxy -> normalizePidsInProxy(proxy, normalizedPids, report));
+    // Normalize PIDs.
+    normalizePids(rdf, normalizedPids, report);
 
     // Override all the normalized PIDs and PID schemes in the record as new ones were added.
     normalizedPids.writeToRecord(rdf);
@@ -182,52 +186,151 @@ public class PidNormalizer implements RecordNormalizeAction {
   }
 
   /**
+   * Collect a list of resources into a map with the about values as key.
+   *
+   * @param resources The list to convert.
+   * @param <T>       The type of the resource objects.
+   * @return The map.
+   */
+  private static <T extends AboutType> Map<String, T> toMap(List<T> resources) {
+    final Map<String, T> result = new HashMap<>();
+    Optional.ofNullable(resources).stream().flatMap(Collection::stream)
+        .filter(Objects::nonNull).filter(resource -> resource.getAbout() != null)
+        .forEach(resource -> result.put(resource.getAbout(), resource));
+    return result;
+  }
+
+  /**
+   * This method returns all web resource references to media links from the aggregations. More
+   * precisely: it returns each isShownBy and hasView reference for which we cannot prove that it is
+   * not a media link. A media link is defined as a link to content that is not HTML.
+   *
+   * @param aggregations   The aggregations from which to obtain the references. Is not
+   *                       <code>null</code>.
+   * @param webResourceMap The web resources by their about value. Is not <code>null</code>. This
+   *                       list is used to determine whether the resource might be an HTML
+   *                       resource.
+   * @return The set of resource references (can be empty).
+   */
+  private Set<String> getMediaReferences(Collection<Aggregation> aggregations,
+      Map<String, WebResourceType> webResourceMap) {
+
+    // Collect all isShownBy and isShownAt references.
+    final Stream<ResourceType> isShownByStream = aggregations.stream()
+        .map(Aggregation::getIsShownBy);
+    final Stream<ResourceType> hasViewStream = aggregations.stream()
+        .map(Aggregation::getHasViewList).filter(Objects::nonNull).flatMap(Collection::stream);
+    final Set<String> result = new HashSet<>();
+    Stream.concat(isShownByStream, hasViewStream).filter(Objects::nonNull)
+        .map(ResourceType::getResource).filter(Objects::nonNull).forEach(result::add);
+
+    // Remove those that represent HTML resources.
+    result.stream().map(webResourceMap::get).filter(Objects::nonNull)
+        .filter(webResource -> {
+          final String contentType = Optional.ofNullable(webResource.getHasMimeType())
+              .map(HasMimeType::getHasMimeType).orElse(null);
+          return "text/html".equals(contentType) || "application/xhtml+xml".equals(contentType);
+        })
+        .map(AboutType::getAbout).forEach(result::remove);
+
+    // Return the result.
+    return result;
+  }
+
+  private void normalizePids(RDF rdfRecord, NormalizedPidsForRecord normalizedPids,
+      InternalNormalizationReport report) {
+
+    // Collect some objects in maps.
+    final Map<String, WebResourceType> webResourceMap = toMap(rdfRecord.getWebResourceList());
+    final Map<String, Aggregation> aggregationMap = toMap(rdfRecord.getAggregationList());
+
+    // Perform PID normalization for proxy objects.
+    final Stream<ProxyType> proxyStream = Optional.ofNullable(rdfRecord.getProxyList()).stream()
+        .flatMap(Collection::stream).filter(Objects::nonNull);
+    proxyStream.forEach(proxy -> {
+
+      // Compute the aggregations associated with this proxy.
+      final List<Aggregation> proxyAggregations = Optional
+          .ofNullable(proxy.getProxyInList()).stream().flatMap(Collection::stream)
+          .filter(Objects::nonNull).map(ResourceType::getResource).filter(Objects::nonNull)
+          .map(aggregationMap::get).filter(Objects::nonNull).toList();
+
+      // Compute the potential PID references from other (non-PID) fields.
+      final Set<String> potentialPidReferences = new HashSet<>();
+      proxyAggregations.stream().map(Aggregation::getIsShownAt).filter(Objects::nonNull)
+          .map(ResourceType::getResource).filter(Objects::nonNull)
+          .forEach(potentialPidReferences::add);
+      potentialPidReferences.addAll(getMediaReferences(proxyAggregations, webResourceMap));
+      Optional.ofNullable(proxy.getChoiceList()).stream()
+          .flatMap(Collection::stream).filter(Objects::nonNull)
+          .filter(Choice::ifIdentifier).map(Choice::getIdentifier).filter(Objects::nonNull)
+          .map(LiteralType::getString).filter(Objects::nonNull)
+          .forEach(potentialPidReferences::add);
+
+      // Normalize the PIDs in this proxy.
+      final List<Pid> allPidsInProxy = Optional.ofNullable(proxy.getPidList()).stream()
+          .flatMap(Collection::stream).filter(Objects::nonNull).toList();
+      final List<Pid> updatedList = normalizePidsForResource(allPidsInProxy,
+          potentialPidReferences, normalizedPids, report);
+      proxy.setPidList(updatedList);
+    });
+  }
+
+  /**
    * Normalize the PID values in accordance with the known PID schemes.
    *
-   * @param proxy          The proxy in which to look for PID values.
-   * @param normalizedPids The collection of known PID objects in the record. New PID objects
-   *                       created during this operation must be added here.
-   * @param report         The report in which to tally operations.
+   * @param allPidsInResource      The PIDs that we find in the resource (before normalization).
+   * @param potentialPidReferences Any other references in the resource that may contain PIDs.
+   * @param normalizedPids         The collection of known PID objects in the record. New PID
+   *                               objects created during this operation must be added here.
+   * @param report                 The report in which to tally operations.
+   * @return The PIDs that we should have in the resource (after normalization).
    */
-  private void normalizePidsInProxy(ProxyType proxy, NormalizedPids normalizedPids,
+  private List<Pid> normalizePidsForResource(List<Pid> allPidsInResource,
+      Set<String> potentialPidReferences, NormalizedPidsForRecord normalizedPids,
       InternalNormalizationReport report) {
 
     // Set up some collections: split into PIDs that need normalization and those that don't.
-    final List<Pid> allPidsInProxy = Optional.ofNullable(proxy.getPidList()).stream()
-        .flatMap(Collection::stream).filter(Objects::nonNull).toList();
-    final List<Pid> nonNormalizedPidsInProxy = allPidsInProxy.stream()
-        .filter(pid -> !StringUtils.isBlank(pid.getString())).toList();
-    final Set<String> normalizedPidIdsInProxy = allPidsInProxy.stream()
+    final List<Pid> nonNormalizedPids = allPidsInResource.stream()
+        .filter(pid -> StringUtils.isNotBlank(pid.getString())).toList();
+    final Set<String> normalizedPidIds = allPidsInResource.stream()
         .map(Pid::getResource).filter(Objects::nonNull).map(Resource::getResource)
-        .filter(resource -> !StringUtils.isBlank(resource)).collect(Collectors.toSet());
+        .filter(StringUtils::isNotBlank).collect(Collectors.toSet());
 
-    // Normalize PIDs.
-    final List<Pid> resultPidsInProxy = new ArrayList<>();
-    for (Pid nonNormalizedPid : nonNormalizedPidsInProxy) {
+    // Normalize PIDs: go by all unnormalized PIDs and all potential PID references.
+    final List<Pid> resultPids = new ArrayList<>();
+    final Stream<Pair<String, Pid>> pidsToNormalize = Stream.concat(
+        nonNormalizedPids.stream().map(pid -> new ImmutablePair<>(pid.getString(), pid)),
+        potentialPidReferences.stream().map(ref -> new ImmutablePair<>(ref, null)));
+    pidsToNormalize.forEach(referencePidPair -> {
 
-      // Normalize the PID. If we can't, add the PID directly as a result.
+      // Attempt normalization.
       final PidMultipleMatchResult normalization = pidSchemeVocabulary.matchPid(
-          nonNormalizedPid.getString());
+          referencePidPair.getLeft());
       if (normalization == null) {
-        resultPidsInProxy.add(nonNormalizedPid);
-        continue;
+
+        // Add any non-normalized PID directly to the result PIDs.
+        Optional.ofNullable(referencePidPair.getRight()).ifPresent(resultPids::add);
+      } else {
+
+        // Find/create the normalized PID object. Collect IDs in a set to guarantee uniqueness.
+        normalizedPidIds.add(normalizedPids.findOrAddNormalizedPid(normalization));
+
+        // Add to the report
+        report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN);
       }
+    });
 
-      // Find or create the normalized PID object. Collect IDs in a set to guarantee uniqueness.
-      normalizedPidIdsInProxy.add(normalizedPids.findOrAddNormalizedPid(normalization));
-
-      // Add to the report
-      report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN);
-    }
-
-    // Add the normalized PID IDs to the result list and replace the list in the proxy.
-    for (String id : normalizedPidIdsInProxy) {
+    // Add the normalized PID IDs to the result list as PID references.
+    for (String id : normalizedPidIds) {
       final Pid newPid = new Pid();
       newPid.setResource(new Resource());
       newPid.getResource().setResource(id);
       newPid.setString("");
-      resultPidsInProxy.add(newPid);
+      resultPids.add(newPid);
     }
-    proxy.setPidList(resultPidsInProxy);
+
+    // Done
+    return resultPids;
   }
 }
