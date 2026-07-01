@@ -12,7 +12,7 @@ public final class RegexUtils {
   /**
    * Represents a matched segment by a regex in some input. There is an implied order: a matched
    * segment improves on another segment if it is earlier in the input or, if there is a tie, if the
-   * match covers a larger segment.
+   * match is shorter.
    *
    * @param start The first index in the input that is in the segment (inclusive).
    * @param end   The first index in the input after the segment (exclusive).
@@ -28,7 +28,7 @@ public final class RegexUtils {
      */
     boolean improvesOn(MatchedSegment otherSegment) {
       return otherSegment == null || otherSegment.start() > this.start()
-          || ((otherSegment.start() == this.start()) && (otherSegment.end() < this.end()));
+          || ((otherSegment.start() == this.start()) && (otherSegment.end() > this.end()));
     }
   }
 
