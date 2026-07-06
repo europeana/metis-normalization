@@ -63,15 +63,12 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
   }
 
   /**
-   * Tries to find one of the patterns in the provided input. If multiple patterns are matched,
-   * we try to find the one that matches as early in the input as possible. If there is still
-   * a tie, we try to find the longest match.
+   * Find the first PID in this input.
    *
-   * @param input The input string from which to extract PIDs.
-   * @return A matcher based on one of the matching patterns that was found to match the input.
-   * Returns <code>null</code> if no pattern matched.
+   * @param input The input in which to discover PIDs. Cannot be <code>null<code>.
+   * @return The match result. Is <code>null</code> exactly if the input does not match this scheme.
    */
-  private Matcher getSuccessfulMatch(String input) {
+  public PidSingleMatchResult find(String input) {
     final OptimalMatch<Matcher> optimalMatch = new OptimalMatch<>(matcher ->
         new MatchedSegment(matcher.start(), matcher.end()));
     for (Pattern pattern : matchingPatterns) {
@@ -80,29 +77,40 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
         optimalMatch.submitAlternative(matcher);
       }
     }
-    return optimalMatch.getCurrentOptimum();
+    return resultFromSuccessfulMatcher(optimalMatch.getCurrentOptimum());
   }
 
   /**
-   * Match a PID against this scheme.
+   * Match a PID candidate against this scheme.
    *
-   * @param input The PID to match.
+   * @param pidCandidate The PID candidate to match. Cannot be <code>null<code>.
    * @return The match result. Is <code>null</code> exactly if the PID does not match this scheme.
    */
-  public PidSingleMatchResult match(String input) {
+  public PidSingleMatchResult match(String pidCandidate) {
+    return matchingPatterns.stream().map(pattern -> pattern.matcher(pidCandidate))
+        .filter(Matcher::matches).map(this::resultFromSuccessfulMatcher).findFirst().orElse(null);
+  }
 
-    // Try to find a match. If we fail, we are done.
-    final Matcher match = getSuccessfulMatch(input);
-    if (match == null) {
+  /**
+   * Convert a successful {@link Matcher} (that has had a successful match or find) to a match
+   * result.
+   *
+   * @param matcher The {@link Matcher} instance.
+   * @return The match result.
+   */
+  private PidSingleMatchResult resultFromSuccessfulMatcher(Matcher matcher) {
+
+    // Null check
+    if (matcher == null) {
       return null;
     }
 
     // Extract information from the match.
-    final String originalPid = match.group();
-    final int start = match.start();
-    final int end = match.end();
+    final String originalPid = matcher.group();
+    final int start = matcher.start();
+    final int end = matcher.end();
     final String canonicalForm = this.canonicalPattern == null ? originalPid :
-        RegexUtils.copyGroupsToTemplate(match, this.canonicalPattern);
+        RegexUtils.copyGroupsToTemplate(matcher, this.canonicalPattern);
 
     // Compile the result.
     final String resolvableForm = Optional.ofNullable(this.resolvablePattern)

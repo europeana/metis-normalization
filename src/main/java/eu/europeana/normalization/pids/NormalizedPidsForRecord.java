@@ -13,6 +13,7 @@ import eu.europeana.metis.schema.jibx.ResourceOrLiteralType;
 import eu.europeana.metis.schema.jibx.ResourceOrLiteralType.Resource;
 import eu.europeana.metis.schema.jibx.ResourceType;
 import eu.europeana.metis.schema.jibx.Value;
+import eu.europeana.metis.schema.jibx.WebResourceType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * This class maintains a collection of normalized PIDs. It represents all persistent identifier
@@ -85,8 +87,10 @@ public class NormalizedPidsForRecord {
       result.setAbout(computeNextPidAbout());
       result.setValue(new Value());
       result.getValue().setString(normalization.getCanonicalPid());
-      result.setInScheme(new InScheme());
-      result.getInScheme().setResource(normalization.getScheme().getSchemeId());
+      if (StringUtils.isNotBlank(normalization.getSchemeId())) {
+        result.setInScheme(new InScheme());
+        result.getInScheme().setResource(normalization.getSchemeId());
+      }
       normalizedPids.put(result.getAbout(), result);
       return result;
     });
@@ -151,8 +155,11 @@ public class NormalizedPidsForRecord {
     final Stream<List<Pid>> pidReferencesInProxy = Optional
         .ofNullable(edmRecord.getProxyList()).stream()
         .flatMap(Collection::stream).filter(Objects::nonNull).map(ProxyType::getPidList);
+    final Stream<List<Pid>> pidReferencesInWebResource = Optional
+        .ofNullable(edmRecord.getWebResourceList()).stream()
+        .flatMap(Collection::stream).filter(Objects::nonNull).map(WebResourceType::getPidList);
     final List<PersistentIdentifierType> referencedPidObjects =
-        pidReferencesInProxy.filter(Objects::nonNull)
+        Stream.concat(pidReferencesInProxy, pidReferencesInWebResource).filter(Objects::nonNull)
         .flatMap(Collection::stream).filter(Objects::nonNull)
         .map(ResourceOrLiteralType::getResource).filter(Objects::nonNull)
         .map(Resource::getResource).filter(Objects::nonNull)

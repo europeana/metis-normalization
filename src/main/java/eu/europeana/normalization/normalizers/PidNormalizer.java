@@ -274,6 +274,17 @@ public class PidNormalizer implements RecordNormalizeAction {
           potentialPidReferences, normalizedPids, report);
       proxy.setPidList(updatedList);
     });
+
+    // Perform PID normalization for web resource objects.
+    final Stream<WebResourceType> webResourceStream = getMediaReferences(aggregationMap.values(),
+        webResourceMap).stream().map(webResourceMap::get).filter(Objects::nonNull);
+    webResourceStream.forEach(webResource -> {
+      final List<Pid> allPidsInWebResource = Optional.ofNullable(webResource.getPidList())
+          .stream().flatMap(Collection::stream).filter(Objects::nonNull).toList();
+      final List<Pid> updatedList = normalizePidsForResource(allPidsInWebResource,
+          Set.of(webResource.getAbout()), normalizedPids, report);
+      webResource.setPidList(updatedList);
+    });
   }
 
   /**
@@ -305,7 +316,7 @@ public class PidNormalizer implements RecordNormalizeAction {
     pidsToNormalize.forEach(referencePidPair -> {
 
       // Attempt normalization.
-      final PidMultipleMatchResult normalization = pidSchemeVocabulary.matchPid(
+      final PidMultipleMatchResult normalization = pidSchemeVocabulary.findPids(
           referencePidPair.getLeft());
       if (normalization == null) {
 

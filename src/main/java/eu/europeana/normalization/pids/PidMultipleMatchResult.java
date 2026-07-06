@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
  */
 public final class PidMultipleMatchResult {
 
-  private final PidSchemeInfo scheme;
+  private final String schemeId;
   private final String canonicalPid;
   private final Set<String> resolvablePids = new HashSet<>();
   private final Set<String> originalPids = new HashSet<>();
@@ -19,11 +19,11 @@ public final class PidMultipleMatchResult {
   /**
    * Constructor.
    *
-   * @param scheme       The PID scheme that matched the PID. Is not null.
-   * @param canonicalPid The canonical version of the PID. Is not null.
+   * @param schemeId     The PID scheme that matched the PID. Is not <code>null</code>.
+   * @param canonicalPid The canonical version of the PID. May be <code>null</code>.
    */
-  private PidMultipleMatchResult(PidSchemeInfo scheme, String canonicalPid) {
-    this.scheme = scheme;
+  private PidMultipleMatchResult(String schemeId, String canonicalPid) {
+    this.schemeId = schemeId;
     this.canonicalPid = canonicalPid;
   }
 
@@ -52,15 +52,15 @@ public final class PidMultipleMatchResult {
     }
 
     // Compile the result.
-    final PidMultipleMatchResult result = new PidMultipleMatchResult(results.getFirst().scheme(),
-        results.getFirst().canonicalPid());
+    final PidMultipleMatchResult result = new PidMultipleMatchResult(
+        results.getFirst().scheme().getSchemeId(), results.getFirst().canonicalPid());
     results.stream().map(PidSingleMatchResult::resolvablePid).forEach(result.resolvablePids::add);
     results.stream().map(PidSingleMatchResult::originalPid).forEach(result.originalPids::add);
     return result;
   }
 
-  public PidSchemeInfo getScheme() {
-    return scheme;
+  public String getSchemeId() {
+    return schemeId;
   }
 
   public String getCanonicalPid() {

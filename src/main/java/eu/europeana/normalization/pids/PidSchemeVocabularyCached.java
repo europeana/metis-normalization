@@ -79,24 +79,25 @@ public final class PidSchemeVocabularyCached {
    * we try to find the one that matches as early in the input as possible. If there is still
    * a tie, we try to find the longest match.
    *
-   * @param input The input string from which to extract PIDs.
+   * @param input The input string from which to extract PIDs. Cannot be <code>null</code>.
    * @return A match result, or <code>null</code> if no match could be found.
    */
   private PidSingleMatchResult findBestMatch(String input)
       throws NormalizationConfigurationException {
     final OptimalMatch<PidSingleMatchResult> bestMatch = new OptimalMatch<>(
         PidSingleMatchResult::getMatchedSegment);
-    getAllSchemesFromCache().forEach(scheme -> bestMatch.submitAlternative(scheme.match(input)));
+    getAllSchemesFromCache().forEach(scheme -> bestMatch.submitAlternative(scheme.find(input)));
     return bestMatch.getCurrentOptimum();
   }
 
   /**
-   * Attempt to match a PID against the vocabulary.
+   * Attempt to find PIDs in the given literal. Note: only part of the literal needs to
+   * match a scheme.
    *
-   * @param input The PID to match.
-   * @return The result of the matching. If <code>null</code>, no PID scheme was found to match.
+   * @param input The literal that may contain PIDs. Cannot be <code>null</code>.
+   * @return The result of the search. If <code>null</code>, no PID scheme was found to match.
    */
-  public PidMultipleMatchResult matchPid(String input) {
+  public PidMultipleMatchResult findPids(String input) {
 
     // Get all PIDs found in the input. Try all schemes repeatedly until no matches are found.
     String remainingInput = input;
@@ -117,6 +118,27 @@ public final class PidSchemeVocabularyCached {
 
     // Compile the result.
     return PidMultipleMatchResult.forResults(results);
+  }
+
+  /**
+   * Attempt to match a PID candidate against the vocabulary. Note: the entire literal needs to
+   * match a scheme.
+   *
+   * @param pidCandidate The PID candidate to match. Cannot be <code>null</code>.
+   * @return The result of the matching. If <code>null</code>, no PID scheme was found to match.
+   */
+  public PidSingleMatchResult matchPid(String pidCandidate) {
+    try {
+      for (PidScheme pidScheme : getAllSchemesFromCache()) {
+        final PidSingleMatchResult pidMatchResult = pidScheme.match(pidCandidate);
+        if (pidMatchResult != null) {
+          return pidMatchResult;
+        }
+      }
+    } catch (NormalizationConfigurationException e) {
+      LOGGER.error("Failed to match PID against PID scheme vocabulary", e);
+    }
+    return null;
   }
 
   /**
