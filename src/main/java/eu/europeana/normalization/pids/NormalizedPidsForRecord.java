@@ -1,6 +1,7 @@
 package eu.europeana.normalization.pids;
 
 import eu.europeana.metis.schema.jibx.AboutType;
+import eu.europeana.metis.schema.jibx.EquivalentPID;
 import eu.europeana.metis.schema.jibx.HasURL;
 import eu.europeana.metis.schema.jibx.InScheme;
 import eu.europeana.metis.schema.jibx.LiteralType;
@@ -16,10 +17,14 @@ import eu.europeana.metis.schema.jibx.Value;
 import eu.europeana.metis.schema.jibx.WebResourceType;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -51,6 +56,91 @@ public class NormalizedPidsForRecord {
   }
 
   /**
+   * Add all provided PIDs for a resource. Equivalence relationships will be established between all
+   * present PID objects referenced from this resource. This method should only be called if there
+   * are no known pid references, so that equivalency is established correctly.
+   *
+   * @param pidReferences  The pid references provided or otherwise known in this resource. Is not
+   *                       <code>null</code>.
+   * @param literalMatches The successful matches for <code>edm:pid</code> literals provided in the
+   *                       resource. Is not <code>null</code>.
+   * @return The set of PID object references that are to be set in the resource as
+   * <code>edm:pid</code> references (overwriting the current list of such references and
+   * literals). Is not <code>null</code>.
+   */
+  public Set<String> findOrAddAllProvidedPidsForResource(Set<String> pidReferences,
+      List<PidSingleMatchResult> literalMatches) {
+    return this.findOrAddAllPidsForResource(pidReferences,
+        literalMatches.stream().map(List::of).map(PidMultipleMatchResult::forResults).toList());
+  }
+
+  /**
+   * Add all discovered PIDs for a resource. Equivalence relationships will be established between
+   * all present PID objects referenced from this resource. This method should be called with all
+   * pid references so that equivalency is established correctly.
+   *
+   * @param discoveredMatches The successful matches for discovered PIDs provided in the resource.
+   *                          Is not <code>null</code>.
+   * @return The set of PID object references that are to be set in the resource as
+   * <code>edm:pid</code> references (overwriting the current list of such references and
+   * literals). Is not <code>null</code>.
+   */
+  public Set<String> findOrAddAllDiscoveredPidsForResource(
+      Collection<PidMultipleMatchResult> discoveredMatches) {
+    return this.findOrAddAllPidsForResource(Collections.emptySet(), discoveredMatches);
+  }
+
+  /**
+   * Add all PIDs for a resource. Equivalence relationships will be established between all present
+   * PID objects referenced from this resource. This method should only be called once for a
+   * resource, so that all equivalences are computed correctly.
+   *
+   * @param existingReferences The pid references already known in this resource. Is not
+   *                           <code>null</code>.
+   * @param newMatches         The successful matches for PID literals encountered or discovered in
+   *                           the resource. Is not <code>null</code>.
+   * @return The set of PID object references that are to be set in the resource as
+   * <code>edm:pid</code> references (overwriting the current list of such references and
+   * literals). Is not <code>null</code>.
+   */
+  private Set<String> findOrAddAllPidsForResource(Set<String> existingReferences,
+      Collection<PidMultipleMatchResult> newMatches) {
+
+    // References go immediately to the result list (they are kept). Prepare the equivalency list.
+    final Set<String> result = new HashSet<>(existingReferences);
+    final Map<String, PersistentIdentifierType> equivalentPidObjects = new HashMap<>();
+
+    // Find PID objects in the record that are referenced. They are considered for equivalency.
+    existingReferences.stream().map(this.normalizedPids::get).filter(Objects::nonNull)
+        .forEach(pid -> equivalentPidObjects.put(pid.getAbout(), pid));
+
+    // Find or create PID objects for literal matches. Add them as reference and for equivalence.
+    newMatches.stream().map(this::findOrAddNormalizedPid).forEach(pid -> {
+      result.add(pid.getAbout());
+      equivalentPidObjects.put(pid.getAbout(), pid);
+    });
+
+    // Add equivalence relations to all PID objects. Only reference known PIDs. Don't self-reference.
+    if (equivalentPidObjects.size() > 1) {
+      equivalentPidObjects.forEach((pidAbout, pid) -> {
+        final Set<String> knownEquivalences = Optional.ofNullable(pid.getEquivalentPIDList())
+            .stream().flatMap(Collection::stream).filter(Objects::nonNull)
+            .map(LiteralType::getString).filter(Objects::nonNull).collect(Collectors.toSet());
+        knownEquivalences.addAll(equivalentPidObjects.keySet());
+        knownEquivalences.remove(pidAbout);
+        pid.setEquivalentPIDList(knownEquivalences.stream().map(equivalence -> {
+          final EquivalentPID literal = new EquivalentPID();
+          literal.setString(equivalence);
+          return literal;
+        }).toList());
+      });
+    }
+
+    // Done. Return all references that are needed.
+    return result;
+  }
+
+  /**
    * Attempts to find a known PID object by canonical PID value.
    *
    * @param canonicalPid The canonical PID to match. Is not <code>null</code>.
@@ -72,10 +162,9 @@ public class NormalizedPidsForRecord {
    * notation (if it was not already there).
    *
    * @param normalization The PID normalization that should be part of this collection.
-   * @return The <code>rdf:about</code> value assigned to this PID normalization within this
-   * collection. This value is not null or empty.
+   * @return The normalized PID object within this collection. This value is not <code>null</code>.
    */
-  public String findOrAddNormalizedPid(PidMultipleMatchResult normalization) {
+  private PersistentIdentifierType findOrAddNormalizedPid(PidMultipleMatchResult normalization) {
 
     // Try to find a matching PID object.
     final Optional<PersistentIdentifierType> existingPid = Optional
@@ -132,7 +221,7 @@ public class NormalizedPidsForRecord {
     });
 
     // Done.
-    return pid.getAbout();
+    return pid;
   }
 
   private String computeNextPidAbout() {

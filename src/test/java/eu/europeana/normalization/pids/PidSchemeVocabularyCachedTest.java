@@ -70,7 +70,7 @@ class PidSchemeVocabularyCachedTest {
     );
   }
 
-  private static Stream<Arguments> matchPidSchemePaths() {
+  private static Stream<Arguments> matchPidsSchemePaths() {
     return Stream.of(
         Arguments.of(TEST_PID_ARK, "ark:/12148/bpt6k279983", null), // valid pid
         Arguments.of("https://n2t.net/ark:/12148/bpt6k279984", "ark:/12148/bpt6k279984", null), //valid pid
@@ -128,22 +128,22 @@ class PidSchemeVocabularyCachedTest {
     PidSchemeVocabularyCached pidSchemeVocabulary = vocabulary;
 
     // When
-    final PidMultipleMatchResult normalization = pidSchemeVocabulary.matchPid(pidValue);
+    final PidMultipleMatchResult normalization = pidSchemeVocabulary.findPids(pidValue);
 
     // Then
     assertNotNull(normalization);
     assertEquals(Set.of(pidValue), normalization.getOriginalPids());
     assertEquals(canonicalPid, normalization.getCanonicalPid());
     assertEquals(Set.of(resolvablePid), normalization.getResolvablePids());
-    assertEquals(schemeId, normalization.getScheme().getSchemeId());
+    assertEquals(schemeId, normalization.getSchemeId());
   }
 
   @ParameterizedTest(name = "Test matchPid with value: {0}, expecting: {1}, exception: {2}")
-  @MethodSource("matchPidSchemePaths")
-  void testMatchPidPaths(String value, String expected, Class<?> clazz) {
+  @MethodSource("matchPidsSchemePaths")
+  void testMatchPidsPaths(String value, String expected, Class<?> clazz) {
     // When
     if (clazz == null) {
-      PidMultipleMatchResult result = vocabulary.matchPid(value);
+      PidMultipleMatchResult result = vocabulary.findPids(value);
 
       // Then
       if (expected != null) {
@@ -154,7 +154,7 @@ class PidSchemeVocabularyCachedTest {
         assertNull(result);
       }
     } else {
-      assertThrows(NullPointerException.class, () -> vocabulary.matchPid(value));
+      assertThrows(NullPointerException.class, () -> vocabulary.findPids(value));
     }
   }
 
@@ -165,7 +165,7 @@ class PidSchemeVocabularyCachedTest {
     final String canonicalPid = "ark:/12148/bpt6k279984";
     final String resolvablePid = "https://n2t.net/ark:/12148/bpt6k279984";
     final String multipleIdenticalPIDs = canonicalPid + "," + resolvablePid;
-    final PidMultipleMatchResult result = vocabulary.matchPid(multipleIdenticalPIDs);
+    final PidMultipleMatchResult result = vocabulary.findPids(multipleIdenticalPIDs);
     assertNotNull(result);
     assertEquals(canonicalPid, result.getCanonicalPid());
     assertEquals(1, result.getResolvablePids().size());
@@ -176,7 +176,7 @@ class PidSchemeVocabularyCachedTest {
 
     // Two different PIDs
     final String twoDifferentPids = canonicalPid + "," + TEST_PID_URN;
-    assertNull(vocabulary.matchPid(twoDifferentPids));
+    assertNull(vocabulary.findPids(twoDifferentPids));
   }
 
   @Test
@@ -185,7 +185,7 @@ class PidSchemeVocabularyCachedTest {
     assertNotNull(pidSchemeVocabularyCached);
 
     // Verify that schemes are loaded
-    PidMultipleMatchResult result = pidSchemeVocabularyCached.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult result = pidSchemeVocabularyCached.findPids(TEST_PID_ARK);
     assertNotNull(result, "Schemes should be initialized and able to match PIDs");
   }
 
@@ -205,7 +205,7 @@ class PidSchemeVocabularyCachedTest {
         try {
           startLatch.await();
 
-          PidMultipleMatchResult result = vocabulary.matchPid(TEST_PID_ARK);
+          PidMultipleMatchResult result = vocabulary.findPids(TEST_PID_ARK);
           if (result != null) {
             results.add(result);
           }
@@ -226,16 +226,16 @@ class PidSchemeVocabularyCachedTest {
   }
 
   @Test
-  void testMultipleMatchCalls() {
+  void testMultipleFindCalls() {
     // Test multiple different PIDs
-    PidMultipleMatchResult result1 = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult result1 = vocabulary.findPids(TEST_PID_ARK);
     assertNotNull(result1);
 
-    PidMultipleMatchResult result2 = vocabulary.matchPid(TEST_PID_URN);
+    PidMultipleMatchResult result2 = vocabulary.findPids(TEST_PID_URN);
     assertNotNull(result2);
 
     // Test invalid PID
-    PidMultipleMatchResult result3 = vocabulary.matchPid("invalid:pid");
+    PidMultipleMatchResult result3 = vocabulary.findPids("invalid:pid");
     assertNull(result3);
 
     // Verify results are correct
@@ -248,14 +248,14 @@ class PidSchemeVocabularyCachedTest {
 
     // When
     // Test multiple applications
-    PidMultipleMatchResult result1 = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult result1 = vocabulary.findPids(TEST_PID_ARK);
     assertNotNull(result1);
 
-    PidMultipleMatchResult result2 = vocabulary.matchPid(TEST_PID_URN);
+    PidMultipleMatchResult result2 = vocabulary.findPids(TEST_PID_URN);
     assertNotNull(result2);
 
     // Then Verify matcher can be reused
-    PidMultipleMatchResult result3 = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult result3 = vocabulary.findPids(TEST_PID_ARK);
     assertNotNull(result3);
     assertEquals(result1.getOriginalPids(), result3.getOriginalPids());
   }
@@ -264,11 +264,11 @@ class PidSchemeVocabularyCachedTest {
   void testSchemeLoadingFromImporter() {
 
     // When
-    PidMultipleMatchResult arkResult = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult arkResult = vocabulary.findPids(TEST_PID_ARK);
 
     // Then
     assertNotNull(arkResult);
-    assertNotNull(arkResult.getScheme());
+    assertNotNull(arkResult.getSchemeId());
     assertNotNull(arkResult.getCanonicalPid());
     assertNotNull(arkResult.getResolvablePids());
     assertTrue(arkResult.getResolvablePids().iterator().next().contains("n2t.net"));
@@ -277,7 +277,7 @@ class PidSchemeVocabularyCachedTest {
   @Test
   void testCanonicalizationProcessing() {
     // When
-    PidMultipleMatchResult result = vocabulary.matchPid("https://n2t.net/ark:/12148/bpt6k279983");
+    PidMultipleMatchResult result = vocabulary.findPids("https://n2t.net/ark:/12148/bpt6k279983");
 
     // Then
     assertNotNull(result);
@@ -288,7 +288,7 @@ class PidSchemeVocabularyCachedTest {
   void testResolvablePidGeneration() {
 
     // When
-    PidMultipleMatchResult result = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult result = vocabulary.findPids(TEST_PID_ARK);
 
     // Then
     assertNotNull(result);
@@ -297,27 +297,14 @@ class PidSchemeVocabularyCachedTest {
   }
 
   @Test
-  void testSchemeInfoDetails() {
-    // When
-    PidMultipleMatchResult result = vocabulary.matchPid(TEST_PID_ARK);
-    assertNotNull(result);
-
-    // Then
-    PidSchemeInfo scheme = result.getScheme();
-    assertNotNull(scheme);
-    assertNotNull(scheme.getSchemeId());
-    assertNotNull(scheme.getTitle());
-  }
-
-  @Test
   void testCaseInsensitivePidMatching() {
     // When
     // Test that matching is case-insensitive (depends on scheme patterns)
-    PidMultipleMatchResult result1 = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult result1 = vocabulary.findPids(TEST_PID_ARK);
     assertNotNull(result1);
 
     // Then Test with uppercase variations
-    PidMultipleMatchResult result2 = vocabulary.matchPid(TEST_PID_ARK.toUpperCase());
+    PidMultipleMatchResult result2 = vocabulary.findPids(TEST_PID_ARK.toUpperCase());
     // May or may not match depending on scheme definition
     assertNotNull(result2);
   }
@@ -326,7 +313,7 @@ class PidSchemeVocabularyCachedTest {
   void testManySequentialMatches() {
     for (int i = 0; i < 100; i++) {
       // When & Then Test multiple sequential matches
-      PidMultipleMatchResult result = vocabulary.matchPid(TEST_PID_ARK);
+      PidMultipleMatchResult result = vocabulary.findPids(TEST_PID_ARK);
       assertNotNull(result, "Sequential matches should all succeed");
     }
   }
@@ -335,28 +322,28 @@ class PidSchemeVocabularyCachedTest {
   void testDifferentPidFormats() {
     // When
     // Test ARK format
-    PidMultipleMatchResult arkResult = vocabulary.matchPid("ark:/12148/bpt6k279983");
+    PidMultipleMatchResult arkResult = vocabulary.findPids("ark:/12148/bpt6k279983");
     assertNotNull(arkResult);
 
     // Test URN format
-    PidMultipleMatchResult urnResult = vocabulary.matchPid("urn:nbn:nl:ui:29-8f66e0a8-b7c9-40a4-be28-54a7c0177061");
+    PidMultipleMatchResult urnResult = vocabulary.findPids("urn:nbn:nl:ui:29-8f66e0a8-b7c9-40a4-be28-54a7c0177061");
     assertNotNull(urnResult);
 
     // Then Verify they belong to different schemes
-    assertNotEquals(arkResult.getScheme().getSchemeId(), urnResult.getScheme().getSchemeId());
+    assertNotEquals(arkResult.getSchemeId(), urnResult.getSchemeId());
   }
 
   @Test
   void testSchemeConsistency() {
     // Given Multiple retrievals of matcher should produce consistent results
     // When
-    PidMultipleMatchResult result1 = vocabulary.matchPid(TEST_PID_ARK);
-    PidMultipleMatchResult result2 = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult result1 = vocabulary.findPids(TEST_PID_ARK);
+    PidMultipleMatchResult result2 = vocabulary.findPids(TEST_PID_ARK);
 
     // Then
     assertEquals(result1.getOriginalPids(), result2.getOriginalPids());
     assertEquals(result1.getCanonicalPid(), result2.getCanonicalPid());
-    assertEquals(result1.getScheme().getSchemeId(), result2.getScheme().getSchemeId());
+    assertEquals(result1.getSchemeId(), result2.getSchemeId());
   }
 
 
@@ -365,7 +352,7 @@ class PidSchemeVocabularyCachedTest {
     // When
     long startTime = System.currentTimeMillis();
     for (int i = 0; i < 1000; i++) {
-      vocabulary.matchPid(TEST_PID_ARK);
+      vocabulary.findPids(TEST_PID_ARK);
     }
     long endTime = System.currentTimeMillis();
 
@@ -379,12 +366,12 @@ class PidSchemeVocabularyCachedTest {
 
     // When & Then Test different URL variations
     // Test ARK with https URL
-    PidMultipleMatchResult result1 = vocabulary.matchPid("https://n2t.net/ark:/12148/bpt6k279983");
+    PidMultipleMatchResult result1 = vocabulary.findPids("https://n2t.net/ark:/12148/bpt6k279983");
     assertNotNull(result1);
     assertEquals("ark:/12148/bpt6k279983", result1.getCanonicalPid());
 
     // Test ARK with http URL
-    PidMultipleMatchResult result2 = vocabulary.matchPid("http://n2t.net/ark:/12148/bpt6k279983");
+    PidMultipleMatchResult result2 = vocabulary.findPids("http://n2t.net/ark:/12148/bpt6k279983");
     assertNotNull(result2);
     assertEquals("ark:/12148/bpt6k279983", result2.getCanonicalPid());
   }
@@ -392,11 +379,11 @@ class PidSchemeVocabularyCachedTest {
   @Test
   void testSchemeIdConsistency() {
     // When
-    PidMultipleMatchResult result1 = vocabulary.matchPid(TEST_PID_ARK);
-    String schemeId1 = result1.getScheme().getSchemeId();
+    PidMultipleMatchResult result1 = vocabulary.findPids(TEST_PID_ARK);
+    String schemeId1 = result1.getSchemeId();
 
-    PidMultipleMatchResult result2 = vocabulary.matchPid(TEST_PID_ARK);
-    String schemeId2 = result2.getScheme().getSchemeId();
+    PidMultipleMatchResult result2 = vocabulary.findPids(TEST_PID_ARK);
+    String schemeId2 = result2.getSchemeId();
 
     // Then
     assertEquals(schemeId1, schemeId2);
@@ -407,8 +394,8 @@ class PidSchemeVocabularyCachedTest {
 
     // When
     String original = "https://n2t.net/ark:/12148/bpt6k279983";
-    PidMultipleMatchResult result1 = vocabulary.matchPid(original);
-    PidMultipleMatchResult result2 = vocabulary.matchPid(original);
+    PidMultipleMatchResult result1 = vocabulary.findPids(original);
+    PidMultipleMatchResult result2 = vocabulary.findPids(original);
 
     // Then
     assertEquals(result1.getCanonicalPid(), result2.getCanonicalPid());
@@ -419,8 +406,8 @@ class PidSchemeVocabularyCachedTest {
 
     // When
     String pid = TEST_PID_ARK;
-    PidMultipleMatchResult result1 = vocabulary.matchPid(pid);
-    PidMultipleMatchResult result2 = vocabulary.matchPid(pid);
+    PidMultipleMatchResult result1 = vocabulary.findPids(pid);
+    PidMultipleMatchResult result2 = vocabulary.findPids(pid);
 
     // Then
     assertEquals(result1.getResolvablePids(), result2.getResolvablePids());
@@ -430,27 +417,27 @@ class PidSchemeVocabularyCachedTest {
   void testMatchingMultipleSchemes() {
 
     // Match ARK scheme
-    PidMultipleMatchResult arkResult = vocabulary.matchPid(TEST_PID_ARK);
+    PidMultipleMatchResult arkResult = vocabulary.findPids(TEST_PID_ARK);
     assertNotNull(arkResult);
 
     // Match URN scheme
-    PidMultipleMatchResult urnResult = vocabulary.matchPid(TEST_PID_URN);
+    PidMultipleMatchResult urnResult = vocabulary.findPids(TEST_PID_URN);
     assertNotNull(urnResult);
 
     // Verify they're different schemes
     assertNotEquals(
-        arkResult.getScheme().getSchemeId(),
-        urnResult.getScheme().getSchemeId()
+        arkResult.getSchemeId(),
+        urnResult.getSchemeId()
     );
   }
 
   @Test
-  void testLongRunningMatchLoop() {
+  void testLongRunningFindLoop() {
 
     // Test that repeated matches don't cause issues
     for (int i = 0; i < 500; i++) {
       // When
-      PidMultipleMatchResult result = vocabulary.matchPid(TEST_PID_ARK);
+      PidMultipleMatchResult result = vocabulary.findPids(TEST_PID_ARK);
       // Then
       assertNotNull(result);
       assertEquals(Set.of(TEST_PID_ARK), result.getOriginalPids());
@@ -462,9 +449,9 @@ class PidSchemeVocabularyCachedTest {
 
     // When Perform many matches to ensure no memory issues
     for (int i = 0; i < 500000; i++) {
-      vocabulary.matchPid(TEST_PID_ARK);
-      vocabulary.matchPid(TEST_PID_URN);
-      vocabulary.matchPid("invalid:pid:" + i);
+      vocabulary.findPids(TEST_PID_ARK);
+      vocabulary.findPids(TEST_PID_URN);
+      vocabulary.findPids("invalid:pid:" + i);
     }
 
     // Then, If we get here without OutOfMemory, test passes
@@ -487,7 +474,7 @@ class PidSchemeVocabularyCachedTest {
         try {
           startLatch.await();
 
-          vocabulary.matchPid(pids[pidIndex]);
+          vocabulary.findPids(pids[pidIndex]);
         } catch (NullPointerException e) {
           // Expected for some edge cases
         } catch (Exception e) {
@@ -518,7 +505,7 @@ class PidSchemeVocabularyCachedTest {
         try {
           startLatch.await();
 
-          PidMultipleMatchResult result = vocabulary.matchPid(TEST_PID_ARK);
+          PidMultipleMatchResult result = vocabulary.findPids(TEST_PID_ARK);
           if (result != null) {
             results.add(result.getCanonicalPid());
           }

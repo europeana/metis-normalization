@@ -16,13 +16,13 @@ import eu.europeana.metis.schema.jibx.WebResourceType;
 import eu.europeana.normalization.model.ConfidenceLevel;
 import eu.europeana.normalization.model.NormalizeActionResult;
 import eu.europeana.normalization.model.RecordWrapper;
+import eu.europeana.normalization.pids.DiscoveredPidsForResource;
 import eu.europeana.normalization.pids.NormalizedPidsForRecord;
 import eu.europeana.normalization.pids.PidCorrectionVocabulary;
-import eu.europeana.normalization.pids.PidMultipleMatchResult;
 import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
+import eu.europeana.normalization.pids.PidSingleMatchResult;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import eu.europeana.normalization.util.NormalizationException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,8 +35,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * This is a normalizer for PID values.
@@ -292,56 +290,49 @@ public class PidNormalizer implements RecordNormalizeAction {
    *
    * @param allPidsInResource      The PIDs that we find in the resource (before normalization).
    * @param potentialPidReferences Any other references in the resource that may contain PIDs.
-   * @param normalizedPids         The collection of known PID objects in the record. New PID
+   * @param recordPids             The collection of known PID objects in the record. New PID
    *                               objects created during this operation must be added here.
    * @param report                 The report in which to tally operations.
    * @return The PIDs that we should have in the resource (after normalization).
    */
   private List<Pid> normalizePidsForResource(List<Pid> allPidsInResource,
-      Set<String> potentialPidReferences, NormalizedPidsForRecord normalizedPids,
+      Set<String> potentialPidReferences, NormalizedPidsForRecord recordPids,
       InternalNormalizationReport report) {
 
-    // Set up some collections: split into PIDs that need normalization and those that don't.
-    final List<Pid> nonNormalizedPids = allPidsInResource.stream()
-        .filter(pid -> StringUtils.isNotBlank(pid.getString())).toList();
-    final Set<String> normalizedPidIds = allPidsInResource.stream()
-        .map(Pid::getResource).filter(Objects::nonNull).map(Resource::getResource)
-        .filter(StringUtils::isNotBlank).collect(Collectors.toSet());
-
-    // Normalize PIDs: go by all unnormalized PIDs and all potential PID references.
-    final List<Pid> resultPids = new ArrayList<>();
-    final Stream<Pair<String, Pid>> pidsToNormalize = Stream.concat(
-        nonNormalizedPids.stream().map(pid -> new ImmutablePair<>(pid.getString(), pid)),
-        potentialPidReferences.stream().map(ref -> new ImmutablePair<>(ref, null)));
-    pidsToNormalize.forEach(referencePidPair -> {
-
-      // Attempt normalization.
-      final PidMultipleMatchResult normalization = pidSchemeVocabulary.findPids(
-          referencePidPair.getLeft());
-      if (normalization == null) {
-
-        // Add any non-normalized PID directly to the result PIDs.
-        Optional.ofNullable(referencePidPair.getRight()).ifPresent(resultPids::add);
-      } else {
-
-        // Find/create the normalized PID object. Collect IDs in a set to guarantee uniqueness.
-        normalizedPidIds.add(normalizedPids.findOrAddNormalizedPid(normalization));
-
-        // Add to the report
-        report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN);
-      }
-    });
-
-    // Add the normalized PID IDs to the result list as PID references.
-    for (String id : normalizedPidIds) {
-      final Pid newPid = new Pid();
-      newPid.setResource(new Resource());
-      newPid.getResource().setResource(id);
-      newPid.setString("");
-      resultPids.add(newPid);
+    // If there are PID references and/or literals, we try to match just them.
+    final Set<String> pidReferences = allPidsInResource.stream()
+        .map(Pid::getResource).filter(Objects::nonNull)
+        .map(Resource::getResource).filter(StringUtils::isNotBlank)
+        .collect(Collectors.toSet());
+    final Set<String> pidLiterals = allPidsInResource.stream()
+        .map(Pid::getString).filter(Objects::nonNull).collect(Collectors.toSet());
+    if (!pidReferences.isEmpty() || !pidLiterals.isEmpty()) {
+      final List<PidSingleMatchResult> literalMatches = pidLiterals.stream()
+          .map(pidSchemeVocabulary::matchPid).filter(Objects::nonNull)
+          .peek(match -> report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN))
+          .toList();
+      final Set<String> allReferencesFromPids = recordPids.findOrAddAllProvidedPidsForResource(
+          pidReferences, literalMatches);
+      return createPids(allReferencesFromPids);
     }
 
-    // Done
-    return resultPids;
+    // So there are no direct PID references/literals. We continue with the discovered potential
+    // PID references.
+    final DiscoveredPidsForResource discoveredPids = new DiscoveredPidsForResource();
+    potentialPidReferences.stream().map(pidSchemeVocabulary::findPids)
+        .filter(Objects::nonNull)
+        .peek(match -> report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN))
+        .forEach(discoveredPids::addPid);
+    return createPids(discoveredPids.writeToRecord(recordPids));
+  }
+
+  private static List<Pid> createPids(Set<String> references) {
+    return references.stream().map(reference -> {
+      final Pid newPid = new Pid();
+      newPid.setResource(new Resource());
+      newPid.getResource().setResource(reference);
+      newPid.setString("");
+      return newPid;
+    }).toList();
   }
 }
