@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.stream.Streams;
 
 /**
  * This class maintains a collection of normalized PIDs. It represents all persistent identifier
@@ -50,8 +51,7 @@ public class NormalizedPidsForRecord {
   public NormalizedPidsForRecord(RDF edmRecord) {
 
     // Initialize the pre-existing PID map to contain all PIDs.
-    this.normalizedPids = Optional.ofNullable(edmRecord.getPersistentIdentifierList()).stream()
-        .flatMap(Collection::stream).filter(Objects::nonNull)
+    this.normalizedPids = Streams.nonNull(edmRecord.getPersistentIdentifierList())
         .collect(Collectors.toMap(AboutType::getAbout, Function.identity()));
   }
 
@@ -123,8 +123,7 @@ public class NormalizedPidsForRecord {
     // Add equivalence relations to all PID objects. Only reference known PIDs. Don't self-reference.
     if (equivalentPidObjects.size() > 1) {
       equivalentPidObjects.forEach((pidAbout, pid) -> {
-        final Set<String> knownEquivalences = Optional.ofNullable(pid.getEquivalentPIDList())
-            .stream().flatMap(Collection::stream).filter(Objects::nonNull)
+        final Set<String> knownEquivalences = Streams.nonNull(pid.getEquivalentPIDList())
             .map(LiteralType::getString).filter(Objects::nonNull).collect(Collectors.toSet());
         knownEquivalences.addAll(equivalentPidObjects.keySet());
         knownEquivalences.remove(pidAbout);
@@ -186,8 +185,7 @@ public class NormalizedPidsForRecord {
 
     // Add each resolvable PID if it doesn't already exist.
     normalization.getResolvablePids().forEach(resolvablePid -> {
-      final boolean addResolvablePidAsHasUrl = Optional.ofNullable(pid.getHasURLList()).stream()
-          .flatMap(Collection::stream).filter(Objects::nonNull)
+      final boolean addResolvablePidAsHasUrl = Streams.nonNull(pid.getHasURLList())
           .map(ResourceType::getResource).filter(Objects::nonNull)
           .noneMatch(resolvablePid::equals);
       if (addResolvablePidAsHasUrl) {
@@ -206,10 +204,8 @@ public class NormalizedPidsForRecord {
       final boolean addOriginalPidAsNotation =
           !normalization.getCanonicalPid().equals(originalPid) &&
               !normalization.getResolvablePids().contains(originalPid) &&
-              Optional.ofNullable(pid.getNotationList()).stream()
-                  .flatMap(Collection::stream).filter(Objects::nonNull)
-                  .map(LiteralType::getString).filter(Objects::nonNull)
-                  .noneMatch(originalPid::equals);
+              Streams.nonNull(pid.getNotationList()).map(LiteralType::getString)
+                  .filter(Objects::nonNull).noneMatch(originalPid::equals);
       if (addOriginalPidAsNotation) {
         if (pid.getNotationList() == null) {
           pid.setNotationList(new ArrayList<>());
@@ -241,12 +237,10 @@ public class NormalizedPidsForRecord {
   public void writeToRecord(RDF edmRecord) {
 
     // Get the list of PID objects referenced from the record.
-    final Stream<List<Pid>> pidReferencesInProxy = Optional
-        .ofNullable(edmRecord.getProxyList()).stream()
-        .flatMap(Collection::stream).filter(Objects::nonNull).map(ProxyType::getPidList);
-    final Stream<List<Pid>> pidReferencesInWebResource = Optional
-        .ofNullable(edmRecord.getWebResourceList()).stream()
-        .flatMap(Collection::stream).filter(Objects::nonNull).map(WebResourceType::getPidList);
+    final Stream<List<Pid>> pidReferencesInProxy = Streams.nonNull(edmRecord.getProxyList())
+        .map(ProxyType::getPidList);
+    final Stream<List<Pid>> pidReferencesInWebResource = Streams
+        .nonNull(edmRecord.getWebResourceList()).map(WebResourceType::getPidList);
     final List<PersistentIdentifierType> referencedPidObjects =
         Stream.concat(pidReferencesInProxy, pidReferencesInWebResource).filter(Objects::nonNull)
         .flatMap(Collection::stream).filter(Objects::nonNull)

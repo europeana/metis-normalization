@@ -35,6 +35,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.stream.Streams;
 
 /**
  * This is a normalizer for PID values.
@@ -91,8 +92,7 @@ public class PidNormalizer implements RecordNormalizeAction {
         .ifPresent(result::add);
     Optional.ofNullable(aggregation.getObject()).map(ResourceType::getResource)
         .ifPresent(result::add);
-    Optional.ofNullable(aggregation.getHasViewList()).stream().flatMap(Collection::stream)
-        .filter(Objects::nonNull).map(ResourceType::getResource)
+    Streams.nonNull(aggregation.getHasViewList()).map(ResourceType::getResource)
         .filter(Objects::nonNull).forEach(result::add);
     return result;
   }
@@ -111,11 +111,11 @@ public class PidNormalizer implements RecordNormalizeAction {
   private static boolean hasMediaReferenceForProxy(
       Map<String, Set<String>> mediaReferencesByAggregation, ProxyType proxy,
       Identifier identifier) {
-    final Predicate<String> mediaReferenceExists = reference -> Optional
-        .ofNullable(proxy.getProxyInList()).stream().flatMap(Collection::stream)
-        .filter(Objects::nonNull).map(ResourceType::getResource).filter(Objects::nonNull)
-        .map(mediaReferencesByAggregation::get).filter(Objects::nonNull)
-        .anyMatch(references -> references.contains(reference));
+    final Predicate<String> mediaReferenceExists = reference ->
+        Streams.nonNull(proxy.getProxyInList())
+            .map(ResourceType::getResource).filter(Objects::nonNull)
+            .map(mediaReferencesByAggregation::get).filter(Objects::nonNull)
+            .anyMatch(references -> references.contains(reference));
     return Optional.ofNullable(identifier).map(LiteralType::getString)
         .map(mediaReferenceExists::test).orElse(false);
   }
@@ -131,22 +131,20 @@ public class PidNormalizer implements RecordNormalizeAction {
 
     // Get the media references by aggregation ID. No null values.
     final Map<String, Set<String>> mediaReferencesByAggregation = new HashMap<>();
-    Optional.ofNullable(rdf.getAggregationList()).stream().flatMap(Collection::stream).forEach(
+    Streams.nonNull(rdf.getAggregationList()).forEach(
         aggregation -> mediaReferencesByAggregation.computeIfAbsent(aggregation.getAbout(),
             about -> new HashSet<>()).addAll(extractMediaReferences(aggregation)));
 
     // Remove dc:identifier values that also occur as media reference.
-    Optional.ofNullable(rdf.getProxyList()).stream().flatMap(Collection::stream).forEach(proxy ->
-        proxy.setChoiceList(Optional.ofNullable(proxy.getChoiceList()).stream()
-            .flatMap(Collection::stream).filter(Objects::nonNull)
-            .filter(choice -> {
-              final boolean removeChoice = choice.ifIdentifier() && hasMediaReferenceForProxy(
-                  mediaReferencesByAggregation, proxy, choice.getIdentifier());
-              if (removeChoice) {
-                report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN);
-              }
-              return !removeChoice;
-            }).toList())
+    Streams.nonNull(rdf.getProxyList()).forEach(proxy ->
+        proxy.setChoiceList(Streams.nonNull(proxy.getChoiceList()).filter(choice -> {
+          final boolean removeChoice = choice.ifIdentifier() && hasMediaReferenceForProxy(
+              mediaReferencesByAggregation, proxy, choice.getIdentifier());
+          if (removeChoice) {
+            report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN);
+          }
+          return !removeChoice;
+        }).toList())
     );
   }
 
@@ -169,8 +167,7 @@ public class PidNormalizer implements RecordNormalizeAction {
     }
 
     // Apply correction to all dc:identifier values.
-    Optional.ofNullable(rdf.getProxyList()).stream().flatMap(Collection::stream)
-        .filter(Objects::nonNull).map(EuropeanaType::getChoiceList).filter(Objects::nonNull)
+    Streams.nonNull(rdf.getProxyList()).map(EuropeanaType::getChoiceList).filter(Objects::nonNull)
         .flatMap(Collection::stream).filter(Objects::nonNull)
         .filter(Choice::ifIdentifier).map(Choice::getIdentifier).filter(Objects::nonNull)
         .forEach(dcIdentifier -> {
@@ -192,8 +189,7 @@ public class PidNormalizer implements RecordNormalizeAction {
    */
   private static <T extends AboutType> Map<String, T> toMap(List<T> resources) {
     final Map<String, T> result = new HashMap<>();
-    Optional.ofNullable(resources).stream().flatMap(Collection::stream)
-        .filter(Objects::nonNull).filter(resource -> resource.getAbout() != null)
+    Streams.nonNull(resources).filter(resource -> resource.getAbout() != null)
         .forEach(resource -> result.put(resource.getAbout(), resource));
     return result;
   }
@@ -243,14 +239,11 @@ public class PidNormalizer implements RecordNormalizeAction {
     final Map<String, Aggregation> aggregationMap = toMap(rdfRecord.getAggregationList());
 
     // Perform PID normalization for proxy objects.
-    final Stream<ProxyType> proxyStream = Optional.ofNullable(rdfRecord.getProxyList()).stream()
-        .flatMap(Collection::stream).filter(Objects::nonNull);
-    proxyStream.forEach(proxy -> {
+    Streams.nonNull(rdfRecord.getProxyList()).forEach(proxy -> {
 
       // Compute the aggregations associated with this proxy.
-      final List<Aggregation> proxyAggregations = Optional
-          .ofNullable(proxy.getProxyInList()).stream().flatMap(Collection::stream)
-          .filter(Objects::nonNull).map(ResourceType::getResource).filter(Objects::nonNull)
+      final List<Aggregation> proxyAggregations = Streams.nonNull(proxy.getProxyInList())
+          .map(ResourceType::getResource).filter(Objects::nonNull)
           .map(aggregationMap::get).filter(Objects::nonNull).toList();
 
       // Compute the potential PID references from other (non-PID) fields.
@@ -259,15 +252,13 @@ public class PidNormalizer implements RecordNormalizeAction {
           .map(ResourceType::getResource).filter(Objects::nonNull)
           .forEach(potentialPidReferences::add);
       potentialPidReferences.addAll(getMediaReferences(proxyAggregations, webResourceMap));
-      Optional.ofNullable(proxy.getChoiceList()).stream()
-          .flatMap(Collection::stream).filter(Objects::nonNull)
-          .filter(Choice::ifIdentifier).map(Choice::getIdentifier).filter(Objects::nonNull)
+      Streams.nonNull(proxy.getChoiceList()).filter(Choice::ifIdentifier)
+          .map(Choice::getIdentifier).filter(Objects::nonNull)
           .map(LiteralType::getString).filter(Objects::nonNull)
           .forEach(potentialPidReferences::add);
 
       // Normalize the PIDs in this proxy.
-      final List<Pid> allPidsInProxy = Optional.ofNullable(proxy.getPidList()).stream()
-          .flatMap(Collection::stream).filter(Objects::nonNull).toList();
+      final List<Pid> allPidsInProxy = Streams.nonNull(proxy.getPidList()).toList();
       final List<Pid> updatedList = normalizePidsForResource(allPidsInProxy,
           potentialPidReferences, normalizedPids, report);
       proxy.setPidList(updatedList);
@@ -277,8 +268,7 @@ public class PidNormalizer implements RecordNormalizeAction {
     final Stream<WebResourceType> webResourceStream = getMediaReferences(aggregationMap.values(),
         webResourceMap).stream().map(webResourceMap::get).filter(Objects::nonNull);
     webResourceStream.forEach(webResource -> {
-      final List<Pid> allPidsInWebResource = Optional.ofNullable(webResource.getPidList())
-          .stream().flatMap(Collection::stream).filter(Objects::nonNull).toList();
+      final List<Pid> allPidsInWebResource = Streams.nonNull(webResource.getPidList()).toList();
       final List<Pid> updatedList = normalizePidsForResource(allPidsInWebResource,
           Set.of(webResource.getAbout()), normalizedPids, report);
       webResource.setPidList(updatedList);
