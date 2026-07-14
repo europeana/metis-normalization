@@ -2,6 +2,7 @@ package eu.europeana.normalization.normalizers;
 
 import eu.europeana.metis.schema.jibx.AboutType;
 import eu.europeana.metis.schema.jibx.Aggregation;
+import eu.europeana.metis.schema.jibx.EuropeanaProxy;
 import eu.europeana.metis.schema.jibx.EuropeanaType;
 import eu.europeana.metis.schema.jibx.EuropeanaType.Choice;
 import eu.europeana.metis.schema.jibx.HasMimeType;
@@ -24,6 +25,7 @@ import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
 import eu.europeana.normalization.pids.PidSingleMatchResult;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import eu.europeana.normalization.util.NormalizationException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,6 +34,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -68,14 +71,8 @@ public class PidNormalizer implements RecordNormalizeAction {
     // that any duplicate values occur in the same form, so correcting first yields fewer matches.
     correctDcIdentifiers(rdf, report);
 
-    // Set up the collection of normalized PIDs.
-    final NormalizedPidsForRecord normalizedPids = new NormalizedPidsForRecord(rdf);
-
     // Normalize PIDs.
-    normalizePids(rdf, normalizedPids, report);
-
-    // Override all the normalized PIDs and PID schemes in the record as new ones were added.
-    normalizedPids.writeToRecord(rdf);
+    normalizePids(rdf, report);
 
     // Done
     return new NormalizeActionResult(RecordWrapper.create(rdf), report);
@@ -247,38 +244,70 @@ public class PidNormalizer implements RecordNormalizeAction {
     return result;
   }
 
-  private void normalizePids(RDF rdfRecord, NormalizedPidsForRecord normalizedPids,
-      InternalNormalizationReport report) {
-
-    // Collect some objects in maps.
-    final Map<String, WebResourceType> webResourceMap = toMap(rdfRecord.getWebResourceList());
-    final Map<String, Aggregation> aggregationMap = toMap(rdfRecord.getAggregationList());
-
-    // Perform PID normalization for proxy objects.
-    Streams.nonNull(rdfRecord.getProxyList()).forEach(proxy -> {
+  /**
+   * Extract potential PID references from the record (i.e., the various proxies and their
+   * associated aggregations and web resources). The result can be used for PID discovery.
+   *
+   * @param proxies        The list of proxies in the record.
+   * @param webResourceMap The web resources by their about value. Is not <code>null</code>.
+   * @param aggregationMap The aggregations by their about value. Is not <code>null</code>.
+   * @return The set of potential PID references.
+   */
+  private Set<String> extractPotentialPidReferencesFromProxies(List<ProxyType> proxies,
+      Map<String, WebResourceType> webResourceMap, Map<String, Aggregation> aggregationMap) {
+    final Set<String> potentialPidReferences = new HashSet<>();
+    proxies.forEach(proxy -> {
 
       // Compute the aggregations associated with this proxy.
       final List<Aggregation> proxyAggregations = Streams.nonNull(proxy.getProxyInList())
-          .map(ResourceType::getResource).filter(Objects::nonNull)
+          .map(ResourceType::getResource).filter(Objects::nonNull).distinct()
           .map(aggregationMap::get).filter(Objects::nonNull).toList();
 
       // Compute the potential PID references from other (non-PID) fields.
-      final Set<String> potentialPidReferences = new HashSet<>(
-          getNonMediaWebReferences(proxyAggregations, webResourceMap));
+      potentialPidReferences.addAll(getNonMediaWebReferences(proxyAggregations, webResourceMap));
       Streams.nonNull(proxy.getChoiceList()).filter(Choice::ifIdentifier)
           .map(Choice::getIdentifier).filter(Objects::nonNull)
           .map(LiteralType::getString).filter(Objects::nonNull)
           .forEach(potentialPidReferences::add);
+    });
+    return potentialPidReferences;
+  }
 
-      // Normalize the PIDs in this proxy.
+  /**
+   * Normalize the record for PIDs.
+   *
+   * @param rdfRecord The record to normalize.
+   * @param report    The report in which to tally operations.
+   */
+  private void normalizePids(RDF rdfRecord, InternalNormalizationReport report) {
+
+    // Collect some objects in lists and maps.
+    final NormalizedPidsForRecord normalizedPids = new NormalizedPidsForRecord(rdfRecord);
+    final Map<String, WebResourceType> webResourceMap = toMap(rdfRecord.getWebResourceList());
+    final Map<String, Aggregation> aggregationMap = toMap(rdfRecord.getAggregationList());
+    final List<ProxyType> proxies = Streams.nonNull(rdfRecord.getProxyList()).toList();
+
+    // Perform PID normalization for proxy objects (as individual resources).
+    final AtomicBoolean noPidsFoundInProxies = new AtomicBoolean(true);
+    proxies.forEach(proxy -> {
       final List<Pid> allPidsInProxy = Streams.nonNull(proxy.getPidList()).toList();
-      final List<Pid> updatedList = normalizePidsForResource(allPidsInProxy,
-          potentialPidReferences, normalizedPids, report);
-      proxy.setPidList(updatedList);
+      proxy.setPidList(normalizePidsForResource(allPidsInProxy, normalizedPids, report));
+      noPidsFoundInProxies.compareAndSet(true, proxy.getPidList().isEmpty());
     });
 
+    // If there are no PIDs in any proxy, we do discovery of PIDs for this record (as a resource).
+    // If we find any, they are added to the Europeana proxy.
+    if (noPidsFoundInProxies.get()) {
+      final Set<String> potentialPids = extractPotentialPidReferencesFromProxies(proxies,
+          webResourceMap, aggregationMap);
+      final List<Pid> newPids = discoverPidsForResource(potentialPids, normalizedPids, report);
+      proxies.stream().filter(proxy -> Optional.ofNullable(proxy.getEuropeanaProxy())
+              .map(EuropeanaProxy::isEuropeanaProxy).orElse(false))
+          .findAny().ifPresent(proxy -> proxy.setPidList(newPids));
+    }
+
     // Perform PID normalization for web resource objects that are proven to be media references
-    // (so not text references).
+    // (so not text references). If no actual PIDs are found for a web resource, do PID discovery.
     getIsShownByAndHasViewReferences(aggregationMap.values()).stream().map(webResourceMap::get)
         .filter(Objects::nonNull).filter(webResource -> {
           final String contentType = Optional.ofNullable(webResource.getHasMimeType())
@@ -286,47 +315,63 @@ public class PidNormalizer implements RecordNormalizeAction {
           return !"text/html".equals(contentType) && !"application/xhtml+xml".equals(contentType);
         }).forEach(webResource -> {
           final List<Pid> allPidsInWebResource = Streams.nonNull(webResource.getPidList()).toList();
-          final List<Pid> updatedList = normalizePidsForResource(allPidsInWebResource,
-              Set.of(webResource.getAbout()), normalizedPids, report);
-          webResource.setPidList(updatedList);
+          webResource.setPidList(
+              normalizePidsForResource(allPidsInWebResource, normalizedPids, report));
+          if (webResource.getPidList().isEmpty()) {
+            webResource.setPidList(
+                discoverPidsForResource(Set.of(webResource.getAbout()), normalizedPids, report));
+          }
         });
+
+    // Override all the normalized PIDs and PID schemes in the record as new ones were added.
+    normalizedPids.writeToRecord(rdfRecord);
   }
 
   /**
    * Normalize the PID values in accordance with the known PID schemes.
    *
    * @param allPidsInResource      The PIDs that we find in the resource (before normalization).
-   * @param potentialPidReferences Any other references in the resource that may contain PIDs.
    * @param recordPids             The collection of known PID objects in the record. New PID
    *                               objects created during this operation must be added here.
    * @param report                 The report in which to tally operations.
    * @return The PIDs that we should have in the resource (after normalization).
    */
   private List<Pid> normalizePidsForResource(List<Pid> allPidsInResource,
-      Set<String> potentialPidReferences, NormalizedPidsForRecord recordPids,
-      InternalNormalizationReport report) {
+      NormalizedPidsForRecord recordPids, InternalNormalizationReport report) {
 
-    // If there are PID references and/or literals, we try to match just them.
+    // Get the PID references and literals.
     final Set<String> pidReferences = allPidsInResource.stream()
         .map(Pid::getResource).filter(Objects::nonNull)
         .map(Resource::getResource).filter(StringUtils::isNotBlank)
         .collect(Collectors.toSet());
     final Set<String> pidLiterals = allPidsInResource.stream()
         .map(Pid::getString).filter(Objects::nonNull).collect(Collectors.toSet());
-    if (!pidReferences.isEmpty() || !pidLiterals.isEmpty()) {
-      final List<PidSingleMatchResult> literalMatches = pidLiterals.stream()
-          .map(pidSchemeVocabulary::matchPid).filter(Objects::nonNull).toList();
-      report.multipleIncrement(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN,
-          literalMatches.size());
-      final Set<String> allReferencesFromPids = recordPids.findOrAddAllProvidedPidsForResource(
-          pidReferences, literalMatches);
-      return createPids(allReferencesFromPids);
-    }
 
-    // So there are no direct PID references/literals. We continue with the discovered potential
-    // PID references.
+    // Try to match the literals, incrementing the report for every success.
+    final List<PidSingleMatchResult> literalMatches = pidLiterals.stream()
+        .map(pidSchemeVocabulary::matchPid).filter(Objects::nonNull).toList();
+    report.multipleIncrement(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN,
+        literalMatches.size());
+
+    // Find or create PID objects and return the successful references.
+    final Set<String> allReferencesFromPids = recordPids.findOrAddAllProvidedPidsForResource(
+        pidReferences, literalMatches);
+    return new ArrayList<>(createPids(allReferencesFromPids));
+  }
+
+  /**
+   * Discover the PID values in other fields and normalize accordance with the known PID schemes.
+   *
+   * @param potentialPids Any other values in the resource that may contain PIDs.
+   * @param recordPids    The collection of known PID objects in the record. New PID objects created
+   *                      during this operation must be added here.
+   * @param report        The report in which to tally operations.
+   * @return The PIDs that we should have in the resource (after normalization).
+   */
+  private List<Pid> discoverPidsForResource(Set<String> potentialPids,
+      NormalizedPidsForRecord recordPids, InternalNormalizationReport report) {
     final DiscoveredPidsForResource discoveredPidCollection = new DiscoveredPidsForResource();
-    final List<PidMultipleMatchResult> discoveredPids = potentialPidReferences.stream()
+    final List<PidMultipleMatchResult> discoveredPids = potentialPids.stream()
         .map(pidSchemeVocabulary::findPids).filter(Objects::nonNull).toList();
     report.multipleIncrement(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN,
         discoveredPids.size());
