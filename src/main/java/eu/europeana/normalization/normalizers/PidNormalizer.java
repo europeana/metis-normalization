@@ -195,9 +195,29 @@ public class PidNormalizer implements RecordNormalizeAction {
   }
 
   /**
-   * This method returns all web resource references to media links from the aggregations. More
-   * precisely: it returns each isShownBy and hasView reference for which we cannot prove that it is
-   * not a media link. A media link is defined as a link to content that is not HTML.
+   * Collect a list of isShownBy and hasView references. Note: we don't check whether there is an
+   * associated web resource.
+   *
+   * @param aggregations The aggregations from which to obtain the references. Is not
+   *                     <code>null</code>.
+   * @return The set of resource references (can be empty).
+   */
+  private Set<String> getIsShownByAndHasViewReferences(Collection<Aggregation> aggregations) {
+    final Stream<ResourceType> isShownByStream = aggregations.stream()
+        .map(Aggregation::getIsShownBy);
+    final Stream<ResourceType> hasViewStream = aggregations.stream()
+        .map(Aggregation::getHasViewList).filter(Objects::nonNull).flatMap(Collection::stream);
+    final Set<String> result = new HashSet<>();
+    Stream.concat(isShownByStream, hasViewStream).filter(Objects::nonNull)
+        .map(ResourceType::getResource).filter(Objects::nonNull).forEach(result::add);
+    return result;
+  }
+
+  /**
+   * This method returns all web resource references to non-media links from the aggregations. More
+   * precisely: it returns each isShownBy and hasView reference for which we cannot prove that it
+   * is a media link. A media link is defined as a link to content that is not HTML. Additionally,
+   * it returns all isShownAt references, as they are always supposed to be non-media links.
    *
    * @param aggregations   The aggregations from which to obtain the references. Is not
    *                       <code>null</code>.
@@ -206,24 +226,22 @@ public class PidNormalizer implements RecordNormalizeAction {
    *                       resource.
    * @return The set of resource references (can be empty).
    */
-  private Set<String> getMediaReferences(Collection<Aggregation> aggregations,
+  private Set<String> getNonMediaWebReferences(Collection<Aggregation> aggregations,
       Map<String, WebResourceType> webResourceMap) {
 
-    // Collect all isShownBy and isShownAt references.
-    final Stream<ResourceType> isShownByStream = aggregations.stream()
-        .map(Aggregation::getIsShownBy);
-    final Stream<ResourceType> hasViewStream = aggregations.stream()
-        .map(Aggregation::getHasViewList).filter(Objects::nonNull).flatMap(Collection::stream);
-    final Set<String> result = new HashSet<>();
-    Stream.concat(isShownByStream, hasViewStream).filter(Objects::nonNull)
-        .map(ResourceType::getResource).filter(Objects::nonNull).forEach(result::add);
-
-    // Remove those that represent HTML resources.
+    // Collect all isShownBy and hasView references and retain only those that are proven to
+    // represent non-media resources (i.e., HTML resources).
+    final Set<String> result = new HashSet<>(getIsShownByAndHasViewReferences(aggregations));
     result.removeIf(webResourceId -> {
       final String contentType = Optional.ofNullable(webResourceMap.get(webResourceId))
           .map(WebResourceType::getHasMimeType).map(HasMimeType::getHasMimeType).orElse(null);
-      return "text/html".equals(contentType) || "application/xhtml+xml".equals(contentType);
+      return contentType != null && !"text/html".equals(contentType)
+          && !"application/xhtml+xml".equals(contentType);
     });
+
+    // Add all isShownAt references (they should all represent non-media resources).
+    aggregations.stream().map(Aggregation::getIsShownAt).filter(Objects::nonNull)
+        .map(ResourceType::getResource).filter(Objects::nonNull).forEach(result::add);
 
     // Return the result.
     return result;
@@ -245,11 +263,8 @@ public class PidNormalizer implements RecordNormalizeAction {
           .map(aggregationMap::get).filter(Objects::nonNull).toList();
 
       // Compute the potential PID references from other (non-PID) fields.
-      final Set<String> potentialPidReferences = new HashSet<>();
-      proxyAggregations.stream().map(Aggregation::getIsShownAt).filter(Objects::nonNull)
-          .map(ResourceType::getResource).filter(Objects::nonNull)
-          .forEach(potentialPidReferences::add);
-      potentialPidReferences.addAll(getMediaReferences(proxyAggregations, webResourceMap));
+      final Set<String> potentialPidReferences = new HashSet<>(
+          getNonMediaWebReferences(proxyAggregations, webResourceMap));
       Streams.nonNull(proxy.getChoiceList()).filter(Choice::ifIdentifier)
           .map(Choice::getIdentifier).filter(Objects::nonNull)
           .map(LiteralType::getString).filter(Objects::nonNull)
@@ -262,15 +277,19 @@ public class PidNormalizer implements RecordNormalizeAction {
       proxy.setPidList(updatedList);
     });
 
-    // Perform PID normalization for web resource objects.
-    final Stream<WebResourceType> webResourceStream = getMediaReferences(aggregationMap.values(),
-        webResourceMap).stream().map(webResourceMap::get).filter(Objects::nonNull);
-    webResourceStream.forEach(webResource -> {
-      final List<Pid> allPidsInWebResource = Streams.nonNull(webResource.getPidList()).toList();
-      final List<Pid> updatedList = normalizePidsForResource(allPidsInWebResource,
-          Set.of(webResource.getAbout()), normalizedPids, report);
-      webResource.setPidList(updatedList);
-    });
+    // Perform PID normalization for web resource objects that are proven to be media references
+    // (so not text references).
+    getIsShownByAndHasViewReferences(aggregationMap.values()).stream().map(webResourceMap::get)
+        .filter(Objects::nonNull).filter(webResource -> {
+          final String contentType = Optional.ofNullable(webResource.getHasMimeType())
+              .map(HasMimeType::getHasMimeType).orElse(null);
+          return !"text/html".equals(contentType) && !"application/xhtml+xml".equals(contentType);
+        }).forEach(webResource -> {
+          final List<Pid> allPidsInWebResource = Streams.nonNull(webResource.getPidList()).toList();
+          final List<Pid> updatedList = normalizePidsForResource(allPidsInWebResource,
+              Set.of(webResource.getAbout()), normalizedPids, report);
+          webResource.setPidList(updatedList);
+        });
   }
 
   /**
