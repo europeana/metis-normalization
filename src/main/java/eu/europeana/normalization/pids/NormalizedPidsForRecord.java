@@ -241,14 +241,15 @@ public class NormalizedPidsForRecord {
         .map(ProxyType::getPidList);
     final Stream<List<Pid>> pidReferencesInWebResource = Streams
         .nonNull(edmRecord.getWebResourceList()).map(WebResourceType::getPidList);
-    final List<PersistentIdentifierType> referencedPidObjects =
+    final Set<String> pidReferences =
         Stream.concat(pidReferencesInProxy, pidReferencesInWebResource).filter(Objects::nonNull)
         .flatMap(Collection::stream).filter(Objects::nonNull)
         .map(ResourceOrLiteralType::getResource).filter(Objects::nonNull)
         .map(Resource::getResource).filter(Objects::nonNull)
-        .map(this.normalizedPids::get).filter(Objects::nonNull).toList();
+        .collect(Collectors.toSet());
 
     // Write the referenced PID objects to the record.
-    edmRecord.setPersistentIdentifierList(referencedPidObjects);
+    edmRecord.setPersistentIdentifierList(
+        pidReferences.stream().map(this.normalizedPids::get).filter(Objects::nonNull).toList());
   }
 }
