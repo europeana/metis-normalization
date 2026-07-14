@@ -19,6 +19,7 @@ import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.pids.DiscoveredPidsForResource;
 import eu.europeana.normalization.pids.NormalizedPidsForRecord;
 import eu.europeana.normalization.pids.PidCorrectionVocabulary;
+import eu.europeana.normalization.pids.PidMultipleMatchResult;
 import eu.europeana.normalization.pids.PidSchemeVocabularyCached;
 import eu.europeana.normalization.pids.PidSingleMatchResult;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
@@ -136,16 +137,15 @@ public class PidNormalizer implements RecordNormalizeAction {
             about -> new HashSet<>()).addAll(extractMediaReferences(aggregation)));
 
     // Remove dc:identifier values that also occur as media reference.
-    Streams.nonNull(rdf.getProxyList()).forEach(proxy ->
-        proxy.setChoiceList(Streams.nonNull(proxy.getChoiceList()).filter(choice -> {
-          final boolean removeChoice = choice.ifIdentifier() && hasMediaReferenceForProxy(
-              mediaReferencesByAggregation, proxy, choice.getIdentifier());
-          if (removeChoice) {
-            report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN);
-          }
-          return !removeChoice;
-        }).toList())
-    );
+    Streams.nonNull(rdf.getProxyList()).forEach(proxy -> {
+      final List<Choice> oldChoices = Streams.nonNull(proxy.getChoiceList()).toList();
+      final List<Choice> newChoices = oldChoices.stream().filter(choice ->
+          !choice.ifIdentifier() || !hasMediaReferenceForProxy(
+              mediaReferencesByAggregation, proxy, choice.getIdentifier())).toList();
+      report.multipleIncrement(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN,
+          oldChoices.size() - proxy.getChoiceList().size());
+      proxy.setChoiceList(newChoices);
+    });
   }
 
   /**
@@ -219,13 +219,11 @@ public class PidNormalizer implements RecordNormalizeAction {
         .map(ResourceType::getResource).filter(Objects::nonNull).forEach(result::add);
 
     // Remove those that represent HTML resources.
-    result.stream().map(webResourceMap::get).filter(Objects::nonNull)
-        .filter(webResource -> {
-          final String contentType = Optional.ofNullable(webResource.getHasMimeType())
-              .map(HasMimeType::getHasMimeType).orElse(null);
-          return "text/html".equals(contentType) || "application/xhtml+xml".equals(contentType);
-        })
-        .map(AboutType::getAbout).forEach(result::remove);
+    result.removeIf(webResourceId -> {
+      final String contentType = Optional.ofNullable(webResourceMap.get(webResourceId))
+          .map(WebResourceType::getHasMimeType).map(HasMimeType::getHasMimeType).orElse(null);
+      return "text/html".equals(contentType) || "application/xhtml+xml".equals(contentType);
+    });
 
     // Return the result.
     return result;
@@ -298,9 +296,9 @@ public class PidNormalizer implements RecordNormalizeAction {
         .map(Pid::getString).filter(Objects::nonNull).collect(Collectors.toSet());
     if (!pidReferences.isEmpty() || !pidLiterals.isEmpty()) {
       final List<PidSingleMatchResult> literalMatches = pidLiterals.stream()
-          .map(pidSchemeVocabulary::matchPid).filter(Objects::nonNull)
-          .peek(match -> report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN))
-          .toList();
+          .map(pidSchemeVocabulary::matchPid).filter(Objects::nonNull).toList();
+      report.multipleIncrement(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN,
+          literalMatches.size());
       final Set<String> allReferencesFromPids = recordPids.findOrAddAllProvidedPidsForResource(
           pidReferences, literalMatches);
       return createPids(allReferencesFromPids);
@@ -308,12 +306,13 @@ public class PidNormalizer implements RecordNormalizeAction {
 
     // So there are no direct PID references/literals. We continue with the discovered potential
     // PID references.
-    final DiscoveredPidsForResource discoveredPids = new DiscoveredPidsForResource();
-    potentialPidReferences.stream().map(pidSchemeVocabulary::findPids)
-        .filter(Objects::nonNull)
-        .peek(match -> report.increment(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN))
-        .forEach(discoveredPids::addPid);
-    return createPids(discoveredPids.writeToRecord(recordPids));
+    final DiscoveredPidsForResource discoveredPidCollection = new DiscoveredPidsForResource();
+    final List<PidMultipleMatchResult> discoveredPids = potentialPidReferences.stream()
+        .map(pidSchemeVocabulary::findPids).filter(Objects::nonNull).toList();
+    report.multipleIncrement(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN,
+        discoveredPids.size());
+    discoveredPids.forEach(discoveredPidCollection::addPid);
+    return createPids(discoveredPidCollection.writeToRecord(recordPids));
   }
 
   private static List<Pid> createPids(Set<String> references) {
