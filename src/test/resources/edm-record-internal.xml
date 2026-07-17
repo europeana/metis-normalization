@@ -43,13 +43,7 @@
   <ore:Proxy rdf:about="ivrla:3827">
     <dc:contributor rdf:resource="http://viaf.org/viaf/17227308" rdfs:label="Author"/>
     <dc:contributor rdf:resource="http://viaf.org/viaf/22950329" rdfs:label="Author"/>
-    <dc:title>Historical Map Collection of the Netherlands</dc:title>
-    <dc:creator>National Library of the Netherlands</dc:creator>
-    <dc:coverage>The Hague</dc:coverage>
-    <dc:coverage>1627 (lato dx in alto)</dc:coverage>
-    <dc:coverage>[1600-1699]</dc:coverage>
-    <dc:coverage>11/1670</dc:coverage>
-    <dc:date>19 century</dc:date>
+    <dc:date>190X</dc:date>
     <dc:description xml:lang="en">Physical location: UCD Library, UCD Library Special Collections,
       UCD Letters, UCD L 1
     </dc:description>
