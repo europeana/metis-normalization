@@ -70,6 +70,7 @@ class DatesNormalizerTest implements DateExtractorTest {
         of("18..", "18XX", CENTURY_NUMERIC),
         of("192?", null, null),// ambiguous
         of("[171-]", null, null), // ambiguous
+        of("19 century", "18XX", CENTURY_NUMERIC),
         of("19th century", "18XX", CENTURY_NUMERIC),
         of("2nd century", "01XX", CENTURY_NUMERIC),
         of("[10th century]", "09XX", CENTURY_NUMERIC),

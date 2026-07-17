@@ -30,6 +30,7 @@ class NormalizationTest {
     assertNotNull(result);
 
     //Verify conversion after normalization
-    rdfConversionUtils.convertStringToRdf(result.getNormalizedRecordsInEdmXml().get(0));
+    final RDF normalisedRDF = rdfConversionUtils.convertStringToRdf(result.getNormalizedRecordsInEdmXml().getFirst());
+    assertNotNull(normalisedRDF);
   }
 }
