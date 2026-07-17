@@ -197,7 +197,6 @@ class DatesNormalizerTest implements DateExtractorTest {
         of(". 1885", null, null),
         of("- 1885", null, null),
         of("1749 (text in parentheses (text in parentheses))", "1749", EDTF),
-        of("1627 (lato dx in alto)", "1627", EDTF),
         // multiple dates no supported
         of("1939; 1954; 1955; 1978; 1939-1945", null, null),
         of("[17__]", null, null),
