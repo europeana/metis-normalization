@@ -107,9 +107,8 @@ public class DatesNormalizer implements RecordNormalizeAction {
       Namespace.DC.getElement("subject"));
 
   private static final List<Pair<Namespace.Element, XpathQuery>> DATE_PROPERTY_FIELDS = List.of(
-      PROXY_QUERY_CREATED, PROXY_QUERY_ISSUED, PROXY_QUERY_TEMPORAL, PROXY_QUERY_DATE);
-  private static final List<Pair<Namespace.Element, XpathQuery>> GENERIC_PROPERTY_FIELDS = List.of(
-      PROXY_QUERY_COVERAGE, PROXY_QUERY_SUBJECT);
+      PROXY_QUERY_CREATED, PROXY_QUERY_ISSUED, PROXY_QUERY_TEMPORAL, PROXY_QUERY_DATE, PROXY_QUERY_COVERAGE);
+  private static final List<Pair<Namespace.Element, XpathQuery>> GENERIC_PROPERTY_FIELDS = List.of(PROXY_QUERY_SUBJECT);
 
   private static final XpathQuery EUROPEANA_PROXY = new XpathQuery("/%s/%s[%s='true']",
       XpathQuery.RDF_TAG, ORE_PROXY, EDM_EUROPEANA_PROXY);
