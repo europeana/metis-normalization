@@ -50,6 +50,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -75,6 +76,7 @@ public class DatesNormalizer implements RecordNormalizeAction {
   private static final Namespace.Element EDM_TIMESPAN = Namespace.EDM.getElement("TimeSpan");
   private static final Namespace.Element RDF_ABOUT = Namespace.RDF.getElement("about");
   private static final Namespace.Element SKOS_PREF_LABEL = Namespace.SKOS.getElement("prefLabel");
+  private static final Namespace.Element SKOS_HIDDEN_LABEL = Namespace.SKOS.getElement("hiddenLabel");
   private static final Namespace.Element XML_LANG = Namespace.XML.getElement("lang");
   private static final Namespace.Element SKOS_NOTATION = Namespace.SKOS.getElement("notation");
   private static final Namespace.Element SKOS_NOTE = Namespace.SKOS.getElement("note");
@@ -221,12 +223,14 @@ public class DatesNormalizer implements RecordNormalizeAction {
     }
 
     // Compute the timespan ID we need.
-    final String timespanId = String.format("#%s", URLEncoder.encode(
-        dateNormalizationResult.getEdtfDate().toString(), StandardCharsets.UTF_8));
-
+    final String timespanId = UriComponentsBuilder.newInstance()
+        .fragment(dateNormalizationResult.getEdtfDate().toString()).toUriString();
+    
     // Append the timespan to the document.
-    appendTimespanEntity(document, dateNormalizationResult.getEdtfDate(), timespanId);
-
+    String originalInputLangTag = element.getAttributeNS(XML_LANG.getNamespace().getUri(), XML_LANG.getElementName());
+    appendTimespanEntity(document, dateNormalizationResult.getEdtfDate(), timespanId,
+        elementText, originalInputLangTag);
+    
     // Add a reference to the timespan to the Europeana proxy. All elements we're adding
     // go at the beginning of the proxy in a choice, so the order doesn't matter.
     final Element reference = XmlUtil.createElement(elementType, europeanaProxy, List.of());
@@ -332,8 +336,11 @@ public class DatesNormalizer implements RecordNormalizeAction {
     return valTrim;
   }
 
-  private void appendTimespanEntity(Document document, AbstractEdtfDate edtfDate, String timespanId) {
-
+  private void appendTimespanEntity(Document document, AbstractEdtfDate edtfDate, String timespanId, String originalInput, String originalLangTag) {
+    //set the original language tag to null if empty, for later comparison in this method
+    if(StringUtils.isEmpty(originalLangTag))
+      originalLangTag=null;
+    
     //Check if element with the same id already exists, if so we need to remove it first.
     List<Element> elements = XmlUtil.getAsElementList(document.getDocumentElement()
                                                               .getElementsByTagNameNS(EDM_TIMESPAN.getNamespace().getUri(),
@@ -357,18 +364,42 @@ public class DatesNormalizer implements RecordNormalizeAction {
     rdfAbout.setValue(timespanId);
     timeSpan.setAttributeNode(rdfAbout);
 
+    final String fullLangName = XmlUtil.getPrefixedElementName(XML_LANG,
+        timeSpan.lookupPrefix(XML_LANG.getNamespace().getUri()));
+    
     // Create and add skosPrefLabel to timespan
     final Element skosPrefLabel = XmlUtil.createElement(SKOS_PREF_LABEL, timeSpan, null);
+    final String prefLabelLangStr;
     if (StringUtils.isNotBlank(edtfDate.getLabel())) {
       skosPrefLabel.setNodeValue(edtfDate.getLabel());
       skosPrefLabel.appendChild(document.createTextNode(edtfDate.getLabel()));
+      //if a xml:lang tag exists in the original value, use it for the prefLabel
+      if(originalLangTag!=null) 
+        prefLabelLangStr=originalLangTag;      
+      else
+        prefLabelLangStr=null;
     } else {
-      final String fullLangName = XmlUtil.getPrefixedElementName(XML_LANG,
-          timeSpan.lookupPrefix(XML_LANG.getNamespace().getUri()));
-      final Attr skosPrefLabelLang = document.createAttributeNS(XML_LANG.getNamespace().getUri(), fullLangName);
-      skosPrefLabel.setAttributeNode(skosPrefLabelLang);
-      skosPrefLabelLang.setValue("zxx");
+      prefLabelLangStr="zxx";      
       skosPrefLabel.appendChild(document.createTextNode(edtfDate.toString()));
+    }
+    if(prefLabelLangStr!=null) {
+      final Attr skosPrefLabelLang = document.createAttributeNS(XML_LANG.getNamespace().getUri(), fullLangName);
+      skosPrefLabelLang.setValue(prefLabelLangStr);
+      skosPrefLabel.setAttributeNode(skosPrefLabelLang);      
+    }
+    
+    // add the skos:hiddenLabel with the original value, if it is different from the
+    // value in the prefLabel
+    boolean labelTextDiffers=!XmlUtil.getElementText(skosPrefLabel).equals(originalInput);
+    boolean langTagDiffers=!StringUtils.equals(originalLangTag, prefLabelLangStr) && !(prefLabelLangStr.equals("zxx") && originalLangTag==null);
+    if ( labelTextDiffers || langTagDiffers ) {
+      final Element skosHiddenLabel = XmlUtil.createElement(SKOS_HIDDEN_LABEL, timeSpan, null);
+      skosHiddenLabel.appendChild(document.createTextNode(originalInput));
+      if (StringUtils.isNotEmpty(originalLangTag)) {
+        final Attr skosHiddenLabelLang = document.createAttributeNS(XML_LANG.getNamespace().getUri(), fullLangName);
+        skosHiddenLabelLang.setValue(originalLangTag);
+        skosHiddenLabel.setAttributeNode(skosHiddenLabelLang);
+      }
     }
 
     // Create and add skosNote elements to timespan in case of approximate or uncertain dates.
