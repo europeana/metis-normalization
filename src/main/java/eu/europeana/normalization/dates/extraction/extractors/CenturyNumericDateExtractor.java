@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 public class CenturyNumericDateExtractor extends AbstractDateExtractor {
 
   private static final String NUMERIC_10_TO_21_ENDING_DOTS_REGEX = "(1\\d|2[0-1])\\.{2}";
-  private static final String NUMERIC_1_TO_21_SUFFIXED_REGEX = "(2?1(:?st)?|2(:?nd)?|3(:?rd)?|(?:1\\d|[4-9]|20)(:?th)?)\\scentury";
+  private static final String NUMERIC_1_TO_21_SUFFIXED_REGEX = "(2?1(?:st)?|2(?:nd)?|3(?:rd)?|(?:1\\d|[4-9]|20)(?:th)?)\\scentury";
 
   private enum CenturyNumericDatePattern {
     PATTERN_YYYY(
