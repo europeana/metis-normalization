@@ -70,6 +70,7 @@ class DatesNormalizerTest implements DateExtractorTest {
         of("18..", "18XX", CENTURY_NUMERIC),
         of("192?", null, null),// ambiguous
         of("[171-]", null, null), // ambiguous
+        of("19 century", "18XX", CENTURY_NUMERIC),
         of("19th century", "18XX", CENTURY_NUMERIC),
         of("2nd century", "01XX", CENTURY_NUMERIC),
         of("[10th century]", "09XX", CENTURY_NUMERIC),
@@ -196,6 +197,7 @@ class DatesNormalizerTest implements DateExtractorTest {
         of(". 1885", null, null),
         of("- 1885", null, null),
         of("1749 (text in parentheses (text in parentheses))", "1749", EDTF),
+        of("1627 (lato dx in alto)", "1627", EDTF),
         // multiple dates no supported
         of("1939; 1954; 1955; 1978; 1939-1945", null, null),
         of("[17__]", null, null),
