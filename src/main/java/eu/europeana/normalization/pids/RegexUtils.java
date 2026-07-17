@@ -3,6 +3,7 @@ package eu.europeana.normalization.pids;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Provides utility methods for handling string transformation using regular expressions.
@@ -50,8 +51,7 @@ public final class RegexUtils {
   public static String copyGroupsToTemplate(Matcher matcher, String template) {
     String result = template;
     for (int grp = 1; grp <= matcher.groupCount(); grp++) {
-      result = result.replace("${" + grp + "}",
-          Optional.ofNullable(matcher.group(grp)).orElse(""));
+      result = result.replace("${" + grp + "}", StringUtils.defaultString(matcher.group(grp)));
     }
     return result;
   }

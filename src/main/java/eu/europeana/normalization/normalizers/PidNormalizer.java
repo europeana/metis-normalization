@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -140,7 +139,7 @@ public class PidNormalizer implements RecordNormalizeAction {
           !choice.ifIdentifier() || !hasMediaReferenceForProxy(
               mediaReferencesByAggregation, proxy, choice.getIdentifier())).toList();
       report.multipleIncrement(this.getClass().getSimpleName(), ConfidenceLevel.CERTAIN,
-          oldChoices.size() - proxy.getChoiceList().size());
+          oldChoices.size() - newChoices.size());
       proxy.setChoiceList(newChoices);
     });
   }
@@ -211,6 +210,18 @@ public class PidNormalizer implements RecordNormalizeAction {
   }
 
   /**
+   * Determines whether the given content type is a media type (instead of a web reference).
+   *
+   * @param contentType A valid content type (mime type). Can be <code>null</code>, in which case
+   *                    <code>false</code> will be returned.
+   * @return Whether the content type can be proven to be a media type.
+   */
+  private static boolean contentTypeIsMediaType(String contentType) {
+    return contentType != null && !"text/html".equals(contentType)
+        && !"application/xhtml+xml".equals(contentType);
+  }
+
+  /**
    * This method returns all web resource references to non-media links from the aggregations. More
    * precisely: it returns each isShownBy and hasView reference for which we cannot prove that it
    * is a media link. A media link is defined as a link to content that is not HTML. Additionally,
@@ -232,8 +243,7 @@ public class PidNormalizer implements RecordNormalizeAction {
     result.removeIf(webResourceId -> {
       final String contentType = Optional.ofNullable(webResourceMap.get(webResourceId))
           .map(WebResourceType::getHasMimeType).map(HasMimeType::getHasMimeType).orElse(null);
-      return contentType != null && !"text/html".equals(contentType)
-          && !"application/xhtml+xml".equals(contentType);
+      return contentTypeIsMediaType(contentType);
     });
 
     // Add all isShownAt references (they should all represent non-media resources).
@@ -287,17 +297,15 @@ public class PidNormalizer implements RecordNormalizeAction {
     final Map<String, Aggregation> aggregationMap = toMap(rdfRecord.getAggregationList());
     final List<ProxyType> proxies = Streams.nonNull(rdfRecord.getProxyList()).toList();
 
-    // Perform PID normalization for proxy objects (as individual resources).
-    final AtomicBoolean noPidsFoundInProxies = new AtomicBoolean(true);
+    // Perform PID normalization for proxy objects (as individual resources). Sets all PID lists.
     proxies.forEach(proxy -> {
       final List<Pid> allPidsInProxy = Streams.nonNull(proxy.getPidList()).toList();
       proxy.setPidList(normalizePidsForResource(allPidsInProxy, normalizedPids, report));
-      noPidsFoundInProxies.compareAndSet(true, proxy.getPidList().isEmpty());
     });
 
     // If there are no PIDs in any proxy, we do discovery of PIDs for this record (as a resource).
     // If we find any, they are added to the Europeana proxy.
-    if (noPidsFoundInProxies.get()) {
+    if (proxies.stream().map(ProxyType::getPidList).allMatch(List::isEmpty)) {
       final Set<String> potentialPids = extractPotentialPidReferencesFromProxies(proxies,
           webResourceMap, aggregationMap);
       final List<Pid> newPids = discoverPidsForResource(potentialPids, normalizedPids, report);
@@ -306,21 +314,22 @@ public class PidNormalizer implements RecordNormalizeAction {
           .findAny().ifPresent(proxy -> proxy.setPidList(newPids));
     }
 
-    // Perform PID normalization for web resource objects that are proven to be media references
-    // (so not text references). If no actual PIDs are found for a web resource, do PID discovery.
+    // Perform PID normalization for web resource objects that could be media references (so proven
+    // to not be web references). If no actual PIDs are found for a web resource, do PID discovery.
     getIsShownByAndHasViewReferences(aggregationMap.values()).stream().map(webResourceMap::get)
         .filter(Objects::nonNull).filter(webResource -> {
           final String contentType = Optional.ofNullable(webResource.getHasMimeType())
               .map(HasMimeType::getHasMimeType).orElse(null);
-          return !"text/html".equals(contentType) && !"application/xhtml+xml".equals(contentType);
+          return contentType == null || contentTypeIsMediaType(contentType);
         }).forEach(webResource -> {
           final List<Pid> allPidsInWebResource = Streams.nonNull(webResource.getPidList()).toList();
-          webResource.setPidList(
-              normalizePidsForResource(allPidsInWebResource, normalizedPids, report));
-          if (webResource.getPidList().isEmpty()) {
-            webResource.setPidList(
-                discoverPidsForResource(Set.of(webResource.getAbout()), normalizedPids, report));
+          List<Pid> newPidsForWebResource = normalizePidsForResource(allPidsInWebResource,
+              normalizedPids, report);
+          if (newPidsForWebResource.isEmpty()) {
+            newPidsForWebResource = discoverPidsForResource(Set.of(webResource.getAbout()),
+                normalizedPids, report);
           }
+          webResource.setPidList(newPidsForWebResource);
         });
 
     // Override all the normalized PIDs and PID schemes in the record as new ones were added.
@@ -360,7 +369,7 @@ public class PidNormalizer implements RecordNormalizeAction {
   }
 
   /**
-   * Discover the PID values in other fields and normalize accordance with the known PID schemes.
+   * Discover the PID values in other fields and normalize in accordance with the known PID schemes.
    *
    * @param potentialPids Any other values in the resource that may contain PIDs.
    * @param recordPids    The collection of known PID objects in the record. New PID objects created
