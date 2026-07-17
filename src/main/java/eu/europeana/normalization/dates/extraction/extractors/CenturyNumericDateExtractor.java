@@ -39,7 +39,7 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
         compile(OPTIONAL_QUESTION_MARK_REGEX + NUMERIC_1_TO_21_SUFFIXED_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
             CASE_INSENSITIVE),
         century -> ((century.length() <= 2 ? Integer.parseInt(century)
-            : Integer.parseInt(century.substring(0, century.length() - 2))) - 1),
+            : Integer.parseInt(century.replaceFirst("(?i)(st|nd|rd|th)$", ""))) - 1),
         DateNormalizationExtractorMatchId.CENTURY_NUMERIC);
 
     private final Pattern pattern;
@@ -69,17 +69,17 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
   @Override
   public DateNormalizationResult extract(String inputValue, boolean allowDayMonthSwap) throws DateExtractionException {
     DateNormalizationResult dateNormalizationResult = DateNormalizationResult.getNoMatchResult(inputValue);
-    for (CenturyNumericDatePattern centerNumericDatePattern : CenturyNumericDatePattern.values()) {
-      final Matcher matcher = centerNumericDatePattern.getPattern().matcher(inputValue);
+    for (CenturyNumericDatePattern centuryNumericDatePattern : CenturyNumericDatePattern.values()) {
+      final Matcher matcher = centuryNumericDatePattern.getPattern().matcher(inputValue);
       if (matcher.matches()) {
         final String century = matcher.group(1);
         InstantEdtfDateBuilder instantEdtfDateBuilder = new InstantEdtfDateBuilder(
-            centerNumericDatePattern.getCenturyExtractorFunction().applyAsInt(century))
+            centuryNumericDatePattern.getCenturyExtractorFunction().applyAsInt(century))
             .withYearPrecision(CENTURY);
         InstantEdtfDate instantEdtfDate = instantEdtfDateBuilder.withDateQualification(getQualification(inputValue))
                                                                 .withAllowDayMonthSwap(allowDayMonthSwap).build();
         dateNormalizationResult =
-            new DateNormalizationResult(centerNumericDatePattern.getDateNormalizationExtractorMatchId(), inputValue,
+            new DateNormalizationResult(centuryNumericDatePattern.getDateNormalizationExtractorMatchId(), inputValue,
                 instantEdtfDate);
         break;
       }
