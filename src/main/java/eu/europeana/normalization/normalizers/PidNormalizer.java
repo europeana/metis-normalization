@@ -210,22 +210,22 @@ public class PidNormalizer implements RecordNormalizeAction {
   }
 
   /**
-   * Determines whether the given content type is a media type (instead of a web reference).
+   * Determines whether the given content type is a website type (instead of a media type).
    *
    * @param contentType A valid content type (mime type). Can be <code>null</code>, in which case
    *                    <code>false</code> will be returned.
-   * @return Whether the content type can be proven to be a media type.
+   * @return Whether the content type can be proven to be a website.
    */
-  private static boolean contentTypeIsMediaType(String contentType) {
-    return contentType != null && !"text/html".equals(contentType)
-        && !"application/xhtml+xml".equals(contentType);
+  private static boolean contentTypeIsWebsite(String contentType) {
+    return "text/html".equals(contentType) || "application/xhtml+xml".equals(contentType);
   }
 
   /**
    * This method returns all web resource references to non-media links from the aggregations. More
-   * precisely: it returns each isShownBy and hasView reference for which we cannot prove that it
-   * is a media link. A media link is defined as a link to content that is not HTML. Additionally,
-   * it returns all isShownAt references, as they are always supposed to be non-media links.
+   * precisely: it returns each isShownBy and hasView reference for which we can prove that it
+   * is a website link (HTML/XHMTL). If we don't have a content type, we assume it is not a website
+   * link, as isShownBy and hasView are not supposed to be. Additionally, it returns all isShownAt
+   * references, as they are always supposed to be non-media links.
    *
    * @param aggregations   The aggregations from which to obtain the references. Is not
    *                       <code>null</code>.
@@ -237,14 +237,14 @@ public class PidNormalizer implements RecordNormalizeAction {
   private Set<String> getNonMediaWebReferences(Collection<Aggregation> aggregations,
       Map<String, WebResourceType> webResourceMap) {
 
-    // Collect all isShownBy and hasView references and retain only those that are proven to
-    // represent non-media resources (i.e., HTML resources).
-    final Set<String> result = new HashSet<>(getIsShownByAndHasViewReferences(aggregations));
-    result.removeIf(webResourceId -> {
-      final String contentType = Optional.ofNullable(webResourceMap.get(webResourceId))
-          .map(WebResourceType::getHasMimeType).map(HasMimeType::getHasMimeType).orElse(null);
-      return contentTypeIsMediaType(contentType);
-    });
+    // Collect all isShownBy and hasView references that are proven to represent non-media resources
+    // (i.e., HTML/XHTML resources). Ensure a mutable hashset is created, so we can add it later.
+    final Set<String> result = getIsShownByAndHasViewReferences(aggregations).stream()
+        .filter(webResourceId -> {
+          final String contentType = Optional.ofNullable(webResourceMap.get(webResourceId))
+              .map(WebResourceType::getHasMimeType).map(HasMimeType::getHasMimeType).orElse(null);
+          return contentTypeIsWebsite(contentType);
+        }).collect(Collectors.toCollection(HashSet::new));
 
     // Add all isShownAt references (they should all represent non-media resources).
     aggregations.stream().map(Aggregation::getIsShownAt).filter(Objects::nonNull)
@@ -314,13 +314,14 @@ public class PidNormalizer implements RecordNormalizeAction {
           .findAny().ifPresent(proxy -> proxy.setPidList(newPids));
     }
 
-    // Perform PID normalization for web resource objects that could be media references (so proven
-    // to not be web references). If no actual PIDs are found for a web resource, do PID discovery.
+    // Perform PID normalization for web resource objects that are or should be media references (so
+    // isShownBy and hasView references that are proven to not be website references). If no actual
+    // PIDs are found for a web resource, do PID discovery.
     getIsShownByAndHasViewReferences(aggregationMap.values()).stream().map(webResourceMap::get)
         .filter(Objects::nonNull).filter(webResource -> {
           final String contentType = Optional.ofNullable(webResource.getHasMimeType())
               .map(HasMimeType::getHasMimeType).orElse(null);
-          return contentType == null || contentTypeIsMediaType(contentType);
+          return !contentTypeIsWebsite(contentType);
         }).forEach(webResource -> {
           final List<Pid> allPidsInWebResource = Streams.nonNull(webResource.getPidList()).toList();
           List<Pid> newPidsForWebResource = normalizePidsForResource(allPidsInWebResource,
