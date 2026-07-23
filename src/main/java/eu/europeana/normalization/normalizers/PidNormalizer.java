@@ -314,24 +314,24 @@ public class PidNormalizer implements RecordNormalizeAction {
           .findAny().ifPresent(proxy -> proxy.setPidList(newPids));
     }
 
-    // Perform PID normalization for web resource objects that are or should be media references (so
-    // isShownBy and hasView references that are proven to not be website references). If no actual
-    // PIDs are found for a web resource, do PID discovery.
-    getIsShownByAndHasViewReferences(aggregationMap.values()).stream().map(webResourceMap::get)
-        .filter(Objects::nonNull).filter(webResource -> {
+    // Perform PID normalization for web resource objects. Set all PID lists.
+    webResourceMap.values().forEach(webResource -> {
+      final List<Pid> pids = Streams.nonNull(webResource.getPidList()).toList();
+      webResource.setPidList(normalizePidsForResource(pids, normalizedPids, report));
+    });
+
+    // Do discovery on web resources for which no actual PIDs are found and that are or should be
+    // media references (so isShownBy and hasView references that are not proven to be websites).
+    getIsShownByAndHasViewReferences(aggregationMap.values()).stream()
+        .map(webResourceMap::get).filter(Objects::nonNull)
+        .filter(webResource -> webResource.getPidList().isEmpty())
+        .filter(webResource -> {
           final String contentType = Optional.ofNullable(webResource.getHasMimeType())
               .map(HasMimeType::getHasMimeType).orElse(null);
           return !contentTypeIsWebsite(contentType);
-        }).forEach(webResource -> {
-          final List<Pid> allPidsInWebResource = Streams.nonNull(webResource.getPidList()).toList();
-          List<Pid> newPidsForWebResource = normalizePidsForResource(allPidsInWebResource,
-              normalizedPids, report);
-          if (newPidsForWebResource.isEmpty()) {
-            newPidsForWebResource = discoverPidsForResource(Set.of(webResource.getAbout()),
-                normalizedPids, report);
-          }
-          webResource.setPidList(newPidsForWebResource);
-        });
+        })
+        .forEach(webResource -> webResource.setPidList(
+            discoverPidsForResource(Set.of(webResource.getAbout()), normalizedPids, report)));
 
     // Override all the normalized PIDs and PID schemes in the record as new ones were added.
     normalizedPids.writeToRecord(rdfRecord);
