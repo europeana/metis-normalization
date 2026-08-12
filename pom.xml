@@ -30,8 +30,8 @@
     <version.spring.boot>4.0.1</version.spring.boot>
     <version.spring.web>7.0.8</version.spring.web>
     <version.ibm.icu4j>69.1</version.ibm.icu4j>
-    <version.commons.lang3>3.12.0</version.commons.lang3>
-    <version.commons.io>2.9.0</version.commons.io>
+    <version.commons.lang3>3.20.0</version.commons.lang3>
+    <version.commons.io>2.22.0</version.commons.io>
     <version.jena.iri>4.7.0</version.jena.iri>
     <version.jena.core>4.7.0</version.jena.core>
     <version.jericho-html>3.4</version.jericho-html>

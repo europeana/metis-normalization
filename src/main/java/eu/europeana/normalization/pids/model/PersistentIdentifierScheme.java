@@ -1,4 +1,4 @@
-package eu.europeana.normalization.pids;
+package eu.europeana.normalization.pids.model;
 
 import java.util.Set;
 import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
