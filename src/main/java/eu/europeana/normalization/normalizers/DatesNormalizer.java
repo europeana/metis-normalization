@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import javax.xml.xpath.XPathExpressionException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -417,7 +418,7 @@ public class DatesNormalizer implements RecordNormalizeAction {
     // value in the prefLabel
     boolean labelTextDiffers = !XmlUtil.getElementText(skosPrefLabel)
         .equals(dateNormalizationResult.getOriginalInputUnprocessed());
-    boolean langTagDiffers = !StringUtils.equals(dateNormalizationResult.getLanguageTag(), prefLabelLangStr)
+    boolean langTagDiffers = !Strings.CI.equals(dateNormalizationResult.getLanguageTag(), prefLabelLangStr)
         && !(prefLabelLangStr.equals("zxx") && dateNormalizationResult.getLanguageTag() == null);
     if (labelTextDiffers || langTagDiffers) {
       final Element skosHiddenLabel = XmlUtil.createElement(SKOS_HIDDEN_LABEL, timeSpan, null);
@@ -457,11 +458,19 @@ public class DatesNormalizer implements RecordNormalizeAction {
     } else if (endCentury == null) {
       endCentury = startCentury;
     }
+    if (startCentury != null) {
+      startCentury=Math.max(1, startCentury);
+      startCentury=Math.min(21, startCentury);
+    }
+    if (endCentury != null) {
+      endCentury=Math.max(1, endCentury);
+      endCentury=Math.min(21, endCentury);
+    }
 
     // Create and add the isPartOf
     final String fullResourceName = XmlUtil.getPrefixedElementName(RDF_RESOURCE,
         timeSpan.lookupPrefix(RDF_RESOURCE.getNamespace().getUri()));
-    for (int century = Math.max(1, startCentury); century <= Math.max(0, endCentury); century++) {
+    for (int century = startCentury; century <= endCentury; century++) {
       final Element dctermsIsPartOf = XmlUtil.createElement(DC_TERMS_IS_PART_OF, timeSpan, null);
       final Attr dctermsIsPartOfResource = document.createAttributeNS(RDF_RESOURCE.getNamespace().getUri(),
           fullResourceName);
@@ -498,7 +507,7 @@ public class DatesNormalizer implements RecordNormalizeAction {
     final String fullLangName = XmlUtil.getPrefixedElementName(XML_LANG,
         timeSpan.lookupPrefix(XML_LANG.getNamespace().getUri()));
 
-    // Create and add skosPrefLabel to timespan
+    // get skosPrefLabel of timespan
     final Element skosPrefLabel = (Element) timeSpan
         .getElementsByTagNameNS(SKOS_PREF_LABEL.getNamespace().getUri(), "prefLabel").item(0);
     String prefLabelLangStr = skosPrefLabel.getAttributeNS(XML_LANG.getNamespace().getUri(), XML_LANG.getElementName());
@@ -507,7 +516,7 @@ public class DatesNormalizer implements RecordNormalizeAction {
     // value in the prefLabel
     boolean labelTextDiffers = !XmlUtil.getElementText(skosPrefLabel)
         .equals(dateNormalizationResult.getOriginalInputUnprocessed());
-    boolean langTagDiffers = !StringUtils.equals(dateNormalizationResult.getLanguageTag(), prefLabelLangStr)
+    boolean langTagDiffers = !Strings.CS.equals(dateNormalizationResult.getLanguageTag(), prefLabelLangStr)
         && !(prefLabelLangStr.equals("zxx") && dateNormalizationResult.getLanguageTag() == null);
     if (labelTextDiffers || langTagDiffers) {
       // check if an equal hiddenLabel already exists
@@ -518,7 +527,7 @@ public class DatesNormalizer implements RecordNormalizeAction {
         String hLabelText = XmlUtil.getElementText(skosPrefLabel);
         String hLabelLang = hLabel.getAttributeNS(XML_LANG.getNamespace().getUri(), XML_LANG.getElementName());
         boolean hLabelTextEquals = hLabelText.equals(dateNormalizationResult.getOriginalInputUnprocessed());
-        boolean hLangTagEquals = StringUtils.equals(dateNormalizationResult.getLanguageTag(), hLabelLang)
+        boolean hLangTagEquals = Strings.CI.equals(dateNormalizationResult.getLanguageTag(), hLabelLang)
             && dateNormalizationResult.getLanguageTag() != null;
         if (hLabelTextEquals && hLangTagEquals) {
           equalLabelExists = true;
