@@ -148,7 +148,7 @@ public class NormalizedPidsForRecord {
   private PersistentIdentifierType findByCanonicalPid(String canonicalPid) {
     for (PersistentIdentifierType candidate : this.normalizedPids.values()) {
       if (Optional.ofNullable(candidate.getValue()).map(LiteralType::getString)
-          .filter(canonicalPid::equals).isPresent()) {
+          .filter(canonicalPid::equalsIgnoreCase).isPresent()) {
         return candidate;
       }
     }
