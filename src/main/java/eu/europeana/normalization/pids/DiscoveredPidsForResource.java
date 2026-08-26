@@ -34,10 +34,10 @@ public class DiscoveredPidsForResource {
   public void addPid(PidMultipleMatchResult newPid) {
 
     // Check if any known PID is a prefix of the new PID (or they are equal). If so, we just need to
-    // merge it into the new PID. Note: no two known PIDs can be a prefix of the new PID. One of the
-    // two known PIDs would have had to be a prefix of the other, which is not possible.
+    // merge the new one into the known one. Note: no two known PIDs can both be a prefix of the new
+    // PID: one of them would be a prefix of the other, which would have been checked before.
     for (PidMultipleMatchResult knownPid : pids.values()) {
-      if (newPid.getCanonicalPid().startsWith(knownPid.getCanonicalPid())) {
+      if (firstIsPrefixOfSecond(knownPid.getCanonicalPid(), newPid.getCanonicalPid())) {
         knownPid.merge(newPid);
         return;
       }
@@ -47,12 +47,24 @@ public class DiscoveredPidsForResource {
     // PIDs we already know. We remove these from the map and merge them into this new PID.
     // Make a copy of the value set, as we may be removing entries from the map.
     for (PidMultipleMatchResult knownPid : new ArrayList<>(pids.values())) {
-      if (knownPid.getCanonicalPid().startsWith(newPid.getCanonicalPid())) {
+      if (firstIsPrefixOfSecond(newPid.getCanonicalPid(), knownPid.getCanonicalPid())) {
         newPid.merge(knownPid);
         pids.remove(knownPid.getCanonicalPid());
       }
     }
     pids.put(newPid.getCanonicalPid(), newPid);
+  }
+
+  /**
+   * Returns whether the first value is a prefix of the second value. This is determined in a
+   * case-insensitive way.
+   *
+   * @param value1 The first value. Is not null.
+   * @param value2 The second value. Is not null.
+   * @return Whether the first value is a prefix of the second value.
+   */
+  private static boolean firstIsPrefixOfSecond(String value1, String value2) {
+    return value2.regionMatches(true, 0, value1, 0, value1.length());
   }
 
   /**

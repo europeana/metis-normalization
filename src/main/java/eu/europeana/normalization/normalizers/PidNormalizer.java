@@ -268,17 +268,19 @@ public class PidNormalizer implements RecordNormalizeAction {
     final Set<String> potentialPidReferences = new HashSet<>();
     proxies.forEach(proxy -> {
 
-      // Compute the aggregations associated with this proxy.
+      // Extract potential PID references from the proxy's aggregation(s).
       final List<Aggregation> proxyAggregations = Streams.nonNull(proxy.getProxyInList())
           .map(ResourceType::getResource).filter(Objects::nonNull).distinct()
           .map(aggregationMap::get).filter(Objects::nonNull).toList();
-
-      // Compute the potential PID references from other (non-PID) fields.
       potentialPidReferences.addAll(getNonMediaWebReferences(proxyAggregations, webResourceMap));
-      Streams.nonNull(proxy.getChoiceList()).filter(Choice::ifIdentifier)
-          .map(Choice::getIdentifier).filter(Objects::nonNull)
-          .map(LiteralType::getString).filter(Objects::nonNull)
-          .forEach(potentialPidReferences::add);
+
+      // Extract potential PID references from the proxy itself.
+      if (!isEuropeanaProxy(proxy)) {
+        Streams.nonNull(proxy.getChoiceList()).filter(Choice::ifIdentifier)
+            .map(Choice::getIdentifier).filter(Objects::nonNull)
+            .map(LiteralType::getString).filter(Objects::nonNull)
+            .forEach(potentialPidReferences::add);
+      }
     });
     return potentialPidReferences;
   }
@@ -309,8 +311,7 @@ public class PidNormalizer implements RecordNormalizeAction {
       final Set<String> potentialPids = extractPotentialPidReferencesFromProxies(proxies,
           webResourceMap, aggregationMap);
       final List<Pid> newPids = discoverPidsForResource(potentialPids, normalizedPids, report);
-      proxies.stream().filter(proxy -> Optional.ofNullable(proxy.getEuropeanaProxy())
-              .map(EuropeanaProxy::isEuropeanaProxy).orElse(false))
+      proxies.stream().filter(PidNormalizer::isEuropeanaProxy)
           .findAny().ifPresent(proxy -> proxy.setPidList(newPids));
     }
 
@@ -335,6 +336,17 @@ public class PidNormalizer implements RecordNormalizeAction {
 
     // Override all the normalized PIDs and PID schemes in the record as new ones were added.
     normalizedPids.writeToRecord(rdfRecord);
+  }
+
+  /**
+   * Determines if the proxy is a Europeana proxy.
+   *
+   * @param proxy The proxy.
+   * @return Whether it is a Europeana proxy.
+   */
+  private static boolean isEuropeanaProxy(ProxyType proxy) {
+    return Optional.ofNullable(proxy.getEuropeanaProxy()).map(EuropeanaProxy::isEuropeanaProxy)
+        .orElse(false);
   }
 
   /**
