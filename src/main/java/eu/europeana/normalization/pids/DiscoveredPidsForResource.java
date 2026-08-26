@@ -2,7 +2,6 @@ package eu.europeana.normalization.pids;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,12 +59,12 @@ public class DiscoveredPidsForResource {
    * Returns whether the first value is a prefix of the second value. This is determined in a
    * case-insensitive way.
    *
-   * @param value1 The first value.
-   * @param value2 The second value.
+   * @param value1 The first value. Is not null.
+   * @param value2 The second value. Is not null.
    * @return Whether the first value is a prefix of the second value.
    */
   private static boolean firstIsPrefixOfSecond(String value1, String value2) {
-    return value2.toLowerCase(Locale.ROOT).startsWith(value1.toLowerCase(Locale.ROOT));
+    return value2.regionMatches(true, 0, value1, 0, value1.length());
   }
 
   /**
