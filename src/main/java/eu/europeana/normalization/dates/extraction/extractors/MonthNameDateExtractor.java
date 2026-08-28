@@ -102,7 +102,8 @@ public class MonthNameDateExtractor extends AbstractDateExtractor {
             instantEdtfDate);
       }
     } catch (DateExtractionException e) {
-      LOGGER.warn("Failed instance extraction!", e);
+      LOGGER.debug("Could not match input value against pattern {}: {}",
+          monthNameDatePattern.name(), inputValue, e);
     }
     return dateNormalizationResult;
   }

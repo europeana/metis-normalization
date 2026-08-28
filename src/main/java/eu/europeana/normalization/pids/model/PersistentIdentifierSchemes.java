@@ -1,4 +1,4 @@
-package eu.europeana.normalization.pids;
+package eu.europeana.normalization.pids.model;
 
 import com.fasterxml.jackson.annotation.JsonRootName;
 import java.util.Collection;

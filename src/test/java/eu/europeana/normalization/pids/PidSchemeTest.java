@@ -25,7 +25,7 @@ class PidSchemeTest {
 
     final String unNormalizedPid = "https://ark.bnf.fr/ark:/12148/bpt6k279983";
 
-    final PidMatchResult normalisation = pidScheme.match(unNormalizedPid);
+    final PidSingleMatchResult normalisation = pidScheme.find(unNormalizedPid);
     assertNotNull(normalisation);
 
     assertEquals(unNormalizedPid, normalisation.originalPid());

@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>eu.europeana.metis</groupId>
   <artifactId>metis-normalization</artifactId>
-  <version>17</version>
+  <version>18</version>
 
   <scm>
     <url>https://github.com/europeana/metis-normalization</url>
@@ -24,13 +24,13 @@
     <version.maven.release.plugin>2.5.3</version.maven.release.plugin>
 
     <!--Internal-->
-    <version.metis-schema>14</version.metis-schema>
+    <version.metis-schema>15-SNAPSHOT</version.metis-schema>
 
     <!--External-->
     <version.spring.boot>4.0.1</version.spring.boot>
     <version.ibm.icu4j>69.1</version.ibm.icu4j>
-    <version.commons.lang3>3.12.0</version.commons.lang3>
-    <version.commons.io>2.9.0</version.commons.io>
+    <version.commons.lang3>3.20.0</version.commons.lang3>
+    <version.commons.io>2.22.0</version.commons.io>
     <version.jena.iri>4.7.0</version.jena.iri>
     <version.jena.core>4.7.0</version.jena.core>
     <version.jericho-html>3.4</version.jericho-html>

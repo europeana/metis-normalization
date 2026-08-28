@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 public class CenturyNumericDateExtractor extends AbstractDateExtractor {
 
   private static final String NUMERIC_10_TO_21_ENDING_DOTS_REGEX = "(1\\d|2[0-1])\\.{2}";
-  private static final String NUMERIC_1_TO_21_SUFFIXED_REGEX = "(2?1st|2nd|3rd|(?:1\\d|[4-9]|20)th)\\scentury";
+  private static final String NUMERIC_1_TO_21_SUFFIXED_REGEX = "(2?1(?:st)?|2(?:nd)?|3(?:rd)?|(?:1\\d|[4-9]|20)(?:th)?)\\scentury";
 
   private enum CenturyNumericDatePattern {
     PATTERN_YYYY(
@@ -36,8 +36,10 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
             CASE_INSENSITIVE),
         Integer::parseInt, DateNormalizationExtractorMatchId.CENTURY_NUMERIC),
     PATTERN_ENGLISH(
-        compile(OPTIONAL_QUESTION_MARK_REGEX + NUMERIC_1_TO_21_SUFFIXED_REGEX + OPTIONAL_QUESTION_MARK_REGEX, CASE_INSENSITIVE),
-        century -> (Integer.parseInt(century.substring(0, century.length() - 2)) - 1),
+        compile(OPTIONAL_QUESTION_MARK_REGEX + NUMERIC_1_TO_21_SUFFIXED_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
+            CASE_INSENSITIVE),
+        century -> ((century.length() <= 2 ? Integer.parseInt(century)
+            : Integer.parseInt(century.replaceFirst("(?i)(st|nd|rd|th)$", ""))) - 1),
         DateNormalizationExtractorMatchId.CENTURY_NUMERIC);
 
     private final Pattern pattern;
@@ -67,17 +69,17 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
   @Override
   public DateNormalizationResult extract(String inputValue, boolean allowDayMonthSwap) throws DateExtractionException {
     DateNormalizationResult dateNormalizationResult = DateNormalizationResult.getNoMatchResult(inputValue);
-    for (CenturyNumericDatePattern centerNumericDatePattern : CenturyNumericDatePattern.values()) {
-      final Matcher matcher = centerNumericDatePattern.getPattern().matcher(inputValue);
+    for (CenturyNumericDatePattern centuryNumericDatePattern : CenturyNumericDatePattern.values()) {
+      final Matcher matcher = centuryNumericDatePattern.getPattern().matcher(inputValue);
       if (matcher.matches()) {
         final String century = matcher.group(1);
         InstantEdtfDateBuilder instantEdtfDateBuilder = new InstantEdtfDateBuilder(
-            centerNumericDatePattern.getCenturyExtractorFunction().applyAsInt(century))
+            centuryNumericDatePattern.getCenturyExtractorFunction().applyAsInt(century))
             .withYearPrecision(CENTURY);
         InstantEdtfDate instantEdtfDate = instantEdtfDateBuilder.withDateQualification(getQualification(inputValue))
                                                                 .withAllowDayMonthSwap(allowDayMonthSwap).build();
         dateNormalizationResult =
-            new DateNormalizationResult(centerNumericDatePattern.getDateNormalizationExtractorMatchId(), inputValue,
+            new DateNormalizationResult(centuryNumericDatePattern.getDateNormalizationExtractorMatchId(), inputValue,
                 instantEdtfDate);
         break;
       }

@@ -1,4 +1,4 @@
-package eu.europeana.normalization.pids.importer;
+package eu.europeana.normalization.pids.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;

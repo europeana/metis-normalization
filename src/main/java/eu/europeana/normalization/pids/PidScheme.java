@@ -1,6 +1,9 @@
 package eu.europeana.normalization.pids;
 
-import eu.europeana.normalization.pids.PersistentIdentifierScheme.Resource;
+import eu.europeana.normalization.pids.RegexUtils.MatchedSegment;
+import eu.europeana.normalization.pids.RegexUtils.OptimalMatch;
+import eu.europeana.normalization.pids.model.PersistentIdentifierScheme;
+import eu.europeana.normalization.pids.model.PersistentIdentifierScheme.Resource;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Objects;
@@ -60,50 +63,59 @@ public class PidScheme implements PidSchemeInfo, Comparable<PidScheme> {
   }
 
   /**
-   * Transforms a PID string into its canonical form.
+   * Find the first PID in this input.
    *
-   * @param pid a valid PID string of this scheme. Cannot be null.
-   * @return the canonical form of the PID. If the PID is already in its canonical form, or this
-   * scheme does not have a canonical form, then the same PID is returned. If the PID does not match
-   * this scheme, <code>null</code> is returned.
+   * @param input The input in which to discover PIDs. Cannot be <code>null<code>.
+   * @return The match result. Is <code>null</code> exactly if the input does not match this scheme.
    */
-  private String getCanonicalForm(String pid) {
-
-    // Try to match against any of the defined patterns. Otherwise, we are done.
-    final Matcher successfulMatcher = matchingPatterns.stream()
-        .map(pattern -> pattern.matcher(pid))
-        .filter(Matcher::matches).findFirst().orElse(null);
-    if (successfulMatcher == null) {
-      return null;
+  public PidSingleMatchResult find(String input) {
+    final OptimalMatch<Matcher> optimalMatch = new OptimalMatch<>(matcher ->
+        new MatchedSegment(matcher.start(), matcher.end()));
+    for (Pattern pattern : matchingPatterns) {
+      final Matcher matcher = pattern.matcher(input);
+      if (matcher.find()) {
+        optimalMatch.submitAlternative(matcher);
+      }
     }
-
-    // Construct the canonical form based on the matched pattern.
-    if (this.canonicalPattern == null) {
-      return pid;
-    }
-    String result = this.canonicalPattern;
-    for (int grp = 1; grp <= successfulMatcher.groupCount(); grp++) {
-      result = result.replace("${" + grp + "}",
-          Optional.ofNullable(successfulMatcher.group(grp)).orElse(""));
-    }
-    return result;
+    return resultFromSuccessfulMatcher(optimalMatch.getCurrentOptimum());
   }
 
   /**
-   * Match a PID against this scheme.
+   * Match a PID candidate against this scheme.
    *
-   * @param pid The PID to match.
+   * @param pidCandidate The PID candidate to match. Cannot be <code>null<code>.
    * @return The match result. Is <code>null</code> exactly if the PID does not match this scheme.
    */
-  public PidMatchResult match(String pid) {
-    final String trimmedPid = Objects.requireNonNull(pid, "pid must not be null").trim();
-    final String canonicalForm = getCanonicalForm(trimmedPid);
-    if (canonicalForm == null) {
+  public PidSingleMatchResult match(String pidCandidate) {
+    return matchingPatterns.stream().map(pattern -> pattern.matcher(pidCandidate))
+        .filter(Matcher::matches).map(this::resultFromSuccessfulMatcher).findFirst().orElse(null);
+  }
+
+  /**
+   * Convert a successful {@link Matcher} (that has had a successful match or find) to a match
+   * result.
+   *
+   * @param matcher The {@link Matcher} instance.
+   * @return The match result.
+   */
+  private PidSingleMatchResult resultFromSuccessfulMatcher(Matcher matcher) {
+
+    // Null check
+    if (matcher == null) {
       return null;
     }
+
+    // Extract information from the match.
+    final String originalPid = matcher.group();
+    final int start = matcher.start();
+    final int end = matcher.end();
+    final String canonicalForm = this.canonicalPattern == null ? originalPid :
+        RegexUtils.copyGroupsToTemplate(matcher, this.canonicalPattern);
+
+    // Compile the result.
     final String resolvableForm = Optional.ofNullable(this.resolvablePattern)
-        .map(pattern -> pattern.replace("${0}", canonicalForm)).orElse(trimmedPid);
-    return new PidMatchResult(this, canonicalForm, resolvableForm, trimmedPid);
+        .map(pattern -> pattern.replace("${0}", canonicalForm)).orElse(originalPid);
+    return new PidSingleMatchResult(this, canonicalForm, resolvableForm, originalPid, start, end);
   }
 
   @Override

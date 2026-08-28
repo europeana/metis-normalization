@@ -1,5 +1,6 @@
 package eu.europeana.normalization.pids;
 
+import eu.europeana.normalization.pids.RegexUtils.OptimalMatch;
 import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImporter;
 import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImporterFactory;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
@@ -10,7 +11,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +31,9 @@ public final class PidSchemeVocabularyCached {
   private static final String URI_SCHEME = "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/config/pid_directory.yaml";
   private static final int MAX_IMPORT_RETRIES = 5;
   private static final long RETRY_BACKOFF_MS = Duration.ofSeconds(1).toMillis();
-
-  private List<PidScheme> schemes = List.of();
-  private final ReentrantLock importCacheLock = new ReentrantLock();
   private final String sourceUri;
+  private final ReentrantLock importCacheLock = new ReentrantLock();
+  private final AtomicReference<List<PidScheme>> schemes = new AtomicReference<>(List.of());
   private volatile long lastSuccessfulImportTime = 0;
 
   /**
@@ -39,7 +41,7 @@ public final class PidSchemeVocabularyCached {
    *
    * @throws NormalizationConfigurationException the normalization configuration exception
    */
-  public PidSchemeVocabularyCached() throws NormalizationConfigurationException {
+  private PidSchemeVocabularyCached() throws NormalizationConfigurationException {
     this(URI_SCHEME);
   }
 
@@ -49,7 +51,7 @@ public final class PidSchemeVocabularyCached {
    * @param sourceUri the source uri
    * @throws NormalizationConfigurationException the normalization configuration exception
    */
-  PidSchemeVocabularyCached(String sourceUri) throws NormalizationConfigurationException {
+   private PidSchemeVocabularyCached(String sourceUri) throws NormalizationConfigurationException {
     if (sourceUri == null || sourceUri.isBlank()) {
       throw new IllegalArgumentException("sourceUri must not be blank");
     }
@@ -64,15 +66,71 @@ public final class PidSchemeVocabularyCached {
   }
 
   /**
-   * Attempt to match a PID against the vocabulary.
+   * Gets instance.
    *
-   * @param pid The PID to match.
+   * @return the instance
+   */
+  public static PidSchemeVocabularyCached getInstance() {
+    return PidSchemeVocabularyCacheHelper.INSTANCE;
+  }
+
+  /**
+   * Tries to find a match in any of the schemes. If multiple patterns are matched,
+   * we try to find the one that matches as early in the input as possible. If there is still
+   * a tie, we try to find the longest match.
+   *
+   * @param input The input string from which to extract PIDs. Cannot be <code>null</code>.
+   * @return A match result, or <code>null</code> if no match could be found.
+   */
+  private PidSingleMatchResult findBestMatch(String input)
+      throws NormalizationConfigurationException {
+    final OptimalMatch<PidSingleMatchResult> bestMatch = new OptimalMatch<>(
+        PidSingleMatchResult::getMatchedSegment);
+    getAllSchemesFromCache().forEach(scheme -> bestMatch.submitAlternative(scheme.find(input)));
+    return bestMatch.getCurrentOptimum();
+  }
+
+  /**
+   * Attempt to find PIDs in the given literal. Note: only part of the literal needs to
+   * match a scheme.
+   *
+   * @param input The literal that may contain PIDs. Cannot be <code>null</code>.
+   * @return The result of the search. If <code>null</code>, no PID scheme was found to match.
+   */
+  public PidMultipleMatchResult findPids(String input) {
+
+    // Get all PIDs found in the input. Try all schemes repeatedly until no matches are found.
+    String remainingInput = input;
+    final List<PidSingleMatchResult> results = new ArrayList<>();
+    try {
+      while (true) {
+        final PidSingleMatchResult bestMatch = findBestMatch(remainingInput);
+        if (bestMatch != null) {
+          results.add(bestMatch);
+          remainingInput = remainingInput.substring(bestMatch.end());
+        } else {
+          break;
+        }
+      }
+    } catch (NormalizationConfigurationException e) {
+      LOGGER.error("Failed to match PID against PID scheme vocabulary", e);
+    }
+
+    // Compile the result.
+    return PidMultipleMatchResult.forResults(results);
+  }
+
+  /**
+   * Attempt to match a PID candidate against the vocabulary. Note: the entire literal needs to
+   * match a scheme.
+   *
+   * @param pidCandidate The PID candidate to match. Cannot be <code>null</code>.
    * @return The result of the matching. If <code>null</code>, no PID scheme was found to match.
    */
-  public PidMatchResult matchPid(String pid) {
+  public PidSingleMatchResult matchPid(String pidCandidate) {
     try {
       for (PidScheme pidScheme : getAllSchemesFromCache()) {
-        PidMatchResult pidMatchResult = pidScheme.match(pid);
+        final PidSingleMatchResult pidMatchResult = pidScheme.match(pidCandidate);
         if (pidMatchResult != null) {
           return pidMatchResult;
         }
@@ -97,7 +155,7 @@ public final class PidSchemeVocabularyCached {
       // 2. Slow path: the cache needs to refresh, use lock to prevent concurrent imports
       refreshCacheIfNeeded();
     }
-    return schemes;
+    return schemes.get();
   }
 
   /**
@@ -106,7 +164,7 @@ public final class PidSchemeVocabularyCached {
    * @return the boolean
    */
   private boolean isCacheValid() {
-    return !schemes.isEmpty() && (System.currentTimeMillis() - lastSuccessfulImportTime) <= IMPORT_CACHE_TTL_HOUR;
+    return !schemes.get().isEmpty() && (System.currentTimeMillis() - lastSuccessfulImportTime) <= IMPORT_CACHE_TTL_HOUR;
   }
 
   /**
@@ -141,10 +199,9 @@ public final class PidSchemeVocabularyCached {
     int attempt = 1;
     boolean importSuccessful = false;
     while (attempt <= MAX_IMPORT_RETRIES && !importSuccessful) {
-      attempt++;
       try {
         LOGGER.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
-        schemes = List.copyOf(importPidSchemes());
+        schemes.set(List.copyOf(importPidSchemes()));
         importSuccessful = true;
       } catch (NormalizationConfigurationException exception) {
         lastException = exception;
@@ -162,12 +219,13 @@ public final class PidSchemeVocabularyCached {
           LOGGER.error("PID scheme import failed after {} attempts", MAX_IMPORT_RETRIES, exception);
         }
       }
+      attempt++;
     }
 
     if (!importSuccessful) {
       LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
           Duration.ofMillis(System.currentTimeMillis() - lastSuccessfulImportTime).toSeconds());
-      if (schemes.isEmpty()) {
+      if (schemes.get().isEmpty()) {
         throw new NormalizationConfigurationException("Could not import PID schemes after " + MAX_IMPORT_RETRIES + " attempts",
             lastException);
       }
@@ -205,6 +263,23 @@ public final class PidSchemeVocabularyCached {
       throw new NormalizationConfigurationException("Could not parse PID schemes URI: " + sourceUri, exception);
     } catch (PidSchemeImportException e) {
       throw new NormalizationConfigurationException("Could not import PID schemes from remote source", e);
+    }
+  }
+
+  /**
+   * The type Pid scheme vocabulary cache helper.
+   */
+  private static class PidSchemeVocabularyCacheHelper {
+
+    private static final PidSchemeVocabularyCached INSTANCE;
+
+    static {
+      try {
+        INSTANCE = new PidSchemeVocabularyCached();
+      } catch (NormalizationConfigurationException e) {
+        LOGGER.error("Failed to initialize PidSchemeVocabularyCached", e);
+        throw new IllegalStateException("Initialization of PidSchemeVocabularyCached failed.", e);
+      }
     }
   }
 }

@@ -5,7 +5,7 @@ package eu.europeana.normalization.pids.importer.exception;
  */
 public class PidSchemeImportException extends Exception {
 
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = -3254360258206690287L;
 
   /**
    * Constructor

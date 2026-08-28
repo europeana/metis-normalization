@@ -1,10 +1,11 @@
 package eu.europeana.normalization.pids.importer;
 
-import eu.europeana.normalization.pids.PersistentIdentifierSchemes;
+import eu.europeana.normalization.pids.model.PersistentIdentifierSchemes;
 import eu.europeana.normalization.pids.PidScheme;
 import eu.europeana.normalization.pids.importer.exception.BadContentException;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
 import eu.europeana.normalization.pids.importer.model.Location;
+import eu.europeana.normalization.pids.model.PidSchemeReferencesConfiguration;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandles;
