@@ -2,6 +2,8 @@ package eu.europeana.normalization.dates;
 
 import static eu.europeana.normalization.dates.DateNormalizationResultStatus.MATCHED;
 
+import org.apache.commons.lang3.StringUtils;
+
 import eu.europeana.normalization.dates.edtf.AbstractEdtfDate;
 import eu.europeana.normalization.dates.sanitize.SanitizeOperation;
 
@@ -19,6 +21,8 @@ public class DateNormalizationResult {
   private final DateNormalizationExtractorMatchId dateNormalizationExtractorMatchId;
   private final String originalInput;
   private final AbstractEdtfDate edtfDate;
+  private String languageTag=null;
+  private String originalInputUnprocessed=null;
 
   /**
    * Constructor with all parameters.
@@ -79,5 +83,24 @@ public class DateNormalizationResult {
 
   public AbstractEdtfDate getEdtfDate() {
     return edtfDate;
+  }
+
+  public String getLanguageTag() {
+    return languageTag;
+  }
+
+  public void setLanguageTag(String languageTag) {
+    //set the original language tag to null if empty, for accurate comparisons
+    if(StringUtils.isEmpty(languageTag))
+      languageTag=null;
+    this.languageTag = languageTag;
+  }
+
+  public String getOriginalInputUnprocessed() {
+    return originalInputUnprocessed;
+  }
+
+  public void setOriginalInputUnprocessed(String originalInputUnprocessed) {
+    this.originalInputUnprocessed = originalInputUnprocessed;
   }
 }
