@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class DatesNormalizerTest implements DateExtractorTest {
 
-  private final static DatesNormalizer NORMALIZER = new DatesNormalizer();
+  private static final DatesNormalizer NORMALIZER = new DatesNormalizer();
 
   @ParameterizedTest
   @MethodSource

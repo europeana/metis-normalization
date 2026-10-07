@@ -219,9 +219,9 @@ public class DatesNormalizer implements RecordNormalizeAction {
       InternalNormalizationReport report, Map<String, Element> normalizedTimespans) {
 
     // Apply the normalization. If nothing can be done, we return.
-    final SourceLiteral source = new SourceLiteral(XmlUtil.getElementText(element),
+    final SourceLiteral sourceLiteral = new SourceLiteral(XmlUtil.getElementText(element),
         element.getAttributeNS(XML_LANG.getNamespace().getUri(), XML_LANG.getElementName()));
-    final DateNormalizationResult dateNormalizationResult = normalizationFunction.apply(source.text());
+    final DateNormalizationResult dateNormalizationResult = normalizationFunction.apply(sourceLiteral.text());
     if (dateNormalizationResult.getDateNormalizationResultStatus() == NO_MATCH) {
       LOGGER.debug("Normalization did not find a match");
       return;
@@ -229,12 +229,12 @@ public class DatesNormalizer implements RecordNormalizeAction {
 
     // Preserve annotations in the URI as well as the preferred label.
     final String timespanIdText = hasRemovedBracketedAnnotation(dateNormalizationResult)
-        ? source.text() : dateNormalizationResult.getEdtfDate().toString();
+        ? sourceLiteral.text() : dateNormalizationResult.getEdtfDate().toString();
     final String timespanId = UriComponentsBuilder.newInstance().fragment(timespanIdText).toUriString();
 
-    final Element timeSpan = normalizedTimespans.computeIfAbsent(timespanId,
-        uri -> appendTimespanEntity(document, dateNormalizationResult, source, uri));
-    includeInTimeSpanEntity(timeSpan, source.text(), source.languageTag());
+    final Element timespanEntity = normalizedTimespans.computeIfAbsent(timespanId,
+        uri -> appendTimespanEntity(document, dateNormalizationResult, sourceLiteral, uri));
+    includeInTimeSpanEntity(timespanEntity, sourceLiteral.text(), sourceLiteral.languageTag());
 
     // Add a reference to the timespan to the Europeana proxy. All elements we're adding
     // go at the beginning of the proxy in a choice, so the order doesn't matter.
@@ -323,11 +323,11 @@ public class DatesNormalizer implements RecordNormalizeAction {
   /**
    * Cleans and normalizes specific characters.
    * <p>
-   * Specifically it will in order:
+   * Specifically, it will in order:
    *   <ul>
    *     <li>Trim the input</li>
    *     <li>Replace non-breaking spaces with normal spaces</li>
-   *     <li>Replace en dash by a normal dash</li>
+   *     <li>Replace en dash with a normal dash</li>
    *   </ul>
    * </p>
    *
@@ -336,7 +336,7 @@ public class DatesNormalizer implements RecordNormalizeAction {
    */
   private static String sanitizeCharacters(String input) {
     String valTrim = input.trim();
-    valTrim = valTrim.replace('\u00a0', ' '); // replace non-breaking spaces by normal spaces
+    valTrim = valTrim.replace('\u00a0', ' '); // replace non-breaking spaces with normal spaces
     valTrim = valTrim.replace('\u2013', '-'); // replace en dash by normal dash
     return valTrim;
   }
@@ -351,9 +351,9 @@ public class DatesNormalizer implements RecordNormalizeAction {
         || operation == SanitizeOperation.ENDING_SQUARE_BRACKETS;
   }
 
-  private Element appendTimespanEntity(Document document, DateNormalizationResult result, SourceLiteral source,
-      String timespanId) {
-    final AbstractEdtfDate edtfDate = result.getEdtfDate();
+  private Element appendTimespanEntity(Document document, DateNormalizationResult dateNormalizationResult,
+      SourceLiteral sourceLiteral, String timespanId) {
+    final AbstractEdtfDate edtfDate = dateNormalizationResult.getEdtfDate();
 
     //Check if element with the same id already exists, if so we need to remove it first.
     List<Element> elements = XmlUtil.getAsElementList(document.getDocumentElement()
@@ -382,12 +382,13 @@ public class DatesNormalizer implements RecordNormalizeAction {
     final Element skosPrefLabel = XmlUtil.createElement(SKOS_PREF_LABEL, timeSpan, null);
     final String prefLabelText;
     final String prefLabelLanguage;
-    if (result.getDateNormalizationExtractorMatchId() == DCMI_PERIOD && StringUtils.isNotBlank(edtfDate.getLabel())) {
+    if (dateNormalizationResult.getDateNormalizationExtractorMatchId() == DCMI_PERIOD && StringUtils.isNotBlank(
+        edtfDate.getLabel())) {
       prefLabelText = edtfDate.getLabel();
-      prefLabelLanguage = source.languageTag();
-    } else if (hasRemovedBracketedAnnotation(result)) {
-      prefLabelText = source.text();
-      prefLabelLanguage = source.languageTag();
+      prefLabelLanguage = sourceLiteral.languageTag();
+    } else if (hasRemovedBracketedAnnotation(dateNormalizationResult)) {
+      prefLabelText = sourceLiteral.text();
+      prefLabelLanguage = sourceLiteral.languageTag();
     } else {
       prefLabelText = edtfDate.toString();
       prefLabelLanguage = "zxx";
@@ -458,10 +459,10 @@ public class DatesNormalizer implements RecordNormalizeAction {
    * Adds the original literal unless an existing label has the same text and language. An untagged literal also matches a
    * preferred label tagged as zxx.
    */
-  void includeInTimeSpanEntity(Element timeSpan, String originalValue, String languageTag) {
+  void includeInTimeSpanEntity(Element timespanEntity, String originalValue, String languageTag) {
     final String language = StringUtils.defaultString(languageTag);
     for (Namespace.Element labelType : SKOS_LABELS) {
-      final List<Element> labels = XmlUtil.getAsElementList(timeSpan.getElementsByTagNameNS(
+      final List<Element> labels = XmlUtil.getAsElementList(timespanEntity.getElementsByTagNameNS(
           labelType.getNamespace().getUri(), labelType.getElementName()));
       for (Element label : labels) {
         final String labelLanguage = label.getAttributeNS(XML_LANG.getNamespace().getUri(), XML_LANG.getElementName());
@@ -473,8 +474,8 @@ public class DatesNormalizer implements RecordNormalizeAction {
       }
     }
 
-    final Element hiddenLabel = XmlUtil.createElement(SKOS_HIDDEN_LABEL, timeSpan, SKOS_LABELS);
-    hiddenLabel.appendChild(timeSpan.getOwnerDocument().createTextNode(originalValue));
+    final Element hiddenLabel = XmlUtil.createElement(SKOS_HIDDEN_LABEL, timespanEntity, SKOS_LABELS);
+    hiddenLabel.appendChild(timespanEntity.getOwnerDocument().createTextNode(originalValue));
     setLabelLanguage(hiddenLabel, language);
   }
 
