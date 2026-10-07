@@ -14,16 +14,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Extractor that matches a century with a decimal numerals.
- * <p>The range of values this accepts are from 1-21 including.</p>
- * <p>Examples of some cases:
+ * Extractor that matches centuries expressed using decimal numerals.
+ * <p>Recognizes numbered centuries from 1 to 21, with optional ordinal suffixes,
+ * and year prefixes from 10 to 21 followed by two dots. These forms use different conversions: a numbered century is reduced by
+ * one, while a year prefix is used directly.</p>
  * <ul>
- *   <li>
- *     Value = 18.. | Outcome = 18XX
- *     Value = 1st century | Outcome = 00XX
- *   </li>
+ *   <li>Value = 18.. | Outcome = 18XX</li>
+ *   <li>Value = 1st century | Outcome = 00XX</li>
+ *   <li>Value = 21st century | Outcome = 20XX</li>
+ *   <li>Value = 21.. | Year prefix = 21XX</li>
  * </ul>
- * </p>
  */
 public class CenturyNumericDateExtractor extends AbstractDateExtractor {
 
@@ -38,8 +38,7 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
     PATTERN_ENGLISH(
         compile(OPTIONAL_QUESTION_MARK_REGEX + NUMERIC_1_TO_21_SUFFIXED_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
             CASE_INSENSITIVE),
-        century -> ((century.length() <= 2 ? Integer.parseInt(century)
-            : Integer.parseInt(century.replaceFirst("(?i)(st|nd|rd|th)$", ""))) - 1),
+        century -> Integer.parseInt(century.replaceFirst("(?i)(st|nd|rd|th)$", "")) - 1,
         DateNormalizationExtractorMatchId.CENTURY_NUMERIC);
 
     private final Pattern pattern;
