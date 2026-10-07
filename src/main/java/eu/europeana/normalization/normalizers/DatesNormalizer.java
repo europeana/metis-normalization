@@ -68,6 +68,7 @@ import org.w3c.dom.Element;
 public class DatesNormalizer implements RecordNormalizeAction {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  private static final int MAX_VOCABULARY_CENTURY = 21;
 
   private static final Namespace.Element EDM_PROVIDED_CHO = Namespace.EDM.getElement("ProvidedCHO");
   private static final Namespace.Element EDM_WEB_RESOURCE = Namespace.EDM.getElement("WebResource");
@@ -424,10 +425,10 @@ public class DatesNormalizer implements RecordNormalizeAction {
       endCentury = startCentury;
     }
 
-    // Create and add the isPartOf
+    // Create century links only within the supported vocabulary range (1-21).
     final String fullResourceName = XmlUtil.getPrefixedElementName(RDF_RESOURCE,
         timeSpan.lookupPrefix(RDF_RESOURCE.getNamespace().getUri()));
-    for (int century = Math.max(1, startCentury); century <= Math.max(0, endCentury); century++) {
+    for (int century = Math.max(1, startCentury); century <= Math.min(MAX_VOCABULARY_CENTURY, endCentury); century++) {
       final Element dctermsIsPartOf = XmlUtil.createElement(DC_TERMS_IS_PART_OF, timeSpan, null);
       final Attr dctermsIsPartOfResource = document.createAttributeNS(RDF_RESOURCE.getNamespace().getUri(), fullResourceName);
       dctermsIsPartOfResource.setValue("http://data.europeana.eu/timespan/" + century);
