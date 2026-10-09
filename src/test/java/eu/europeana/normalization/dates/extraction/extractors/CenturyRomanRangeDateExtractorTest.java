@@ -4,6 +4,9 @@ import static org.junit.jupiter.params.provider.Arguments.of;
 
 import eu.europeana.normalization.dates.DateNormalizationExtractorMatchId;
 import eu.europeana.normalization.dates.DateNormalizationResult;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -11,7 +14,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class CenturyRomanRangeDateExtractorTest implements DateExtractorTest {
 
-  private static final CenturyRomanRangeDateExtractor ROMAN_CENTURY_RANGE_DATE_EXTRACTOR = new CenturyRomanRangeDateExtractor();
+  private static final CenturyRomanRangeDateExtractor ROMAN_CENTURY_RANGE_DATE_EXTRACTOR = new CenturyRomanRangeDateExtractor(
+      Clock.fixed(Instant.parse("2026-10-07T00:00:00Z"), ZoneOffset.UTC));
 
   void assertExtract(String input, String expected) {
     final DateNormalizationResult dateNormalizationResult = ROMAN_CENTURY_RANGE_DATE_EXTRACTOR.extractDateProperty(input);
@@ -97,6 +101,30 @@ class CenturyRomanRangeDateExtractorTest implements DateExtractorTest {
         of("sII-V", null, null), //Without a dot a space is required
         of("secVI-XVII", null, null), //Without a dot a space is required
         of("saecX-XVIII?", null, null) //Without a dot a space is required
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource
+  void extractAtDate(String date, String input, String expected) {
+    final Clock clock = Clock.fixed(Instant.parse(date + "T00:00:00Z"), ZoneOffset.UTC);
+    final DateNormalizationResult result = new CenturyRomanRangeDateExtractor(clock).extractDateProperty(input);
+    assertDateNormalizationResult(result, expected, DateNormalizationExtractorMatchId.CENTURY_RANGE_ROMAN);
+  }
+
+  private static Stream<Arguments> extractAtDate() {
+    return Stream.of(
+        of("2100-12-31", "XXI-XXII", null),
+        of("2100-12-31", "XXII-XXI", null),
+        of("2101-01-01", "XXI-XXII", "20XX/21XX"),
+        of("2101-01-01", "XXII-XXI", "20XX/21XX"),
+        of("2101-01-01", "XXII-XXIII", null),
+        of("2201-01-01", "XXII-XXIII", "21XX/22XX"),
+        of("2201-01-01", "?sec. xxii-xxiii?", "21XX?/22XX?"),
+        of("9901-01-01", "XCIX-C", "98XX/99XX"),
+        of("+10001-01-01", "C-CI", null),
+        of("9901-01-01", "XXII-XXIIII", null),
+        of("9901-01-01", "XXIIII-XXII", null)
     );
   }
 

@@ -4,6 +4,9 @@ import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId
 import static org.junit.jupiter.params.provider.Arguments.of;
 
 import eu.europeana.normalization.dates.DateNormalizationResult;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -11,7 +14,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class CenturyRomaDateExtractorTest implements DateExtractorTest {
 
-  private static final CenturyRomanDateExtractor ROMAN_CENTURY_DATE_EXTRACTOR = new CenturyRomanDateExtractor();
+  private static final CenturyRomanDateExtractor ROMAN_CENTURY_DATE_EXTRACTOR = new CenturyRomanDateExtractor(
+      Clock.fixed(Instant.parse("2026-10-07T00:00:00Z"), ZoneOffset.UTC));
 
   void assertExtract(String input, String expected) {
     final DateNormalizationResult dateNormalizationResult = ROMAN_CENTURY_DATE_EXTRACTOR.extractDateProperty(input);
@@ -87,6 +91,38 @@ class CenturyRomaDateExtractorTest implements DateExtractorTest {
         of("MDCLXX", null),
         // Invalid roman
         of("IXX", null)
+    );
+  }
+
+  @ParameterizedTest
+  @MethodSource
+  void extractAtDate(String date, String input, String expected) {
+    final Clock clock = Clock.fixed(Instant.parse(date + "T00:00:00Z"), ZoneOffset.UTC);
+    final DateNormalizationResult result = new CenturyRomanDateExtractor(clock).extractDateProperty(input);
+    assertDateNormalizationResult(result, expected, CENTURY_ROMAN);
+  }
+
+  private static Stream<Arguments> extractAtDate() {
+    return Stream.of(
+        of("2026-10-07", "XXII", null),
+        of("2100-12-31", "XXII", null),
+        of("2101-01-01", "XXII", "21XX"),
+        of("2101-01-01", "?sec. xxii?", "21XX?"),
+        of("2201-01-01", "XXIII", "22XX"),
+        of("2301-01-01", "XXIV", "23XX"),
+        of("3001-01-01", "XXXI", "30XX"),
+        of("9900-12-31", "C", null),
+        of("9901-01-01", "C", "99XX"),
+        of("+10001-01-01", "CI", null),
+        of("+10001-01-01", "MDCLXX", null),
+        of("9901-01-01", "IIII", null),
+        of("9901-01-01", "IXX", null),
+        of("9901-01-01", "IC", null),
+        of("9901-01-01", "VX", null),
+        of("9901-01-01", "XXIIII", null),
+        of("9901-01-01", "", null),
+        of("9901-01-01", "s.", null),
+        of("9901-01-01", "s. ?", null)
     );
   }
 

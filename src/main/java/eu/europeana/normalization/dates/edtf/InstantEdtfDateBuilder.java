@@ -5,6 +5,7 @@ import static java.lang.String.format;
 import eu.europeana.normalization.dates.YearPrecision;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
 import java.lang.invoke.MethodHandles;
+import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.Month;
@@ -45,9 +46,10 @@ public class InstantEdtfDateBuilder {
   private final Set<DateQualification> dateQualifications = EnumSet.noneOf(DateQualification.class);
   private boolean allowDayMonthSwap = true;
   private boolean isMoreThanFourDigitsYear = false;
+  private Clock clock = Clock.systemDefaultZone();
 
   /**
-   * Constructor which initializes the builder with the minimum requirement of year value.
+   * Constructor that initializes the builder with the minimum requirement of year value.
    *
    * @param year the year value
    */
@@ -139,9 +141,11 @@ public class InstantEdtfDateBuilder {
 
   private void validateDateNotInFuture() throws DateExtractionException {
     try {
-      final boolean isYearMonthDayInTheFuture = yearMonthDayObj != null && yearMonthDayObj.isAfter(LocalDate.now());
-      final boolean isYearMonthInTheFuture = monthObj != null && YearMonth.of(yearObj.getValue(), month).isAfter(YearMonth.now());
-      final boolean isYearInTheFuture = yearObj != null && yearObj.isAfter(Year.now());
+      final LocalDate today = LocalDate.now(clock);
+      final boolean isYearMonthDayInTheFuture = yearMonthDayObj != null && yearMonthDayObj.isAfter(today);
+      final boolean isYearMonthInTheFuture = monthObj != null
+          && YearMonth.of(yearObj.getValue(), month).isAfter(YearMonth.from(today));
+      final boolean isYearInTheFuture = yearObj != null && yearObj.isAfter(Year.from(today));
 
       if (isYearMonthDayInTheFuture || isYearMonthInTheFuture || isYearInTheFuture) {
         throw new DateExtractionException("Date cannot be in the future");
@@ -168,6 +172,17 @@ public class InstantEdtfDateBuilder {
     Integer tempMonth = month;
     month = day;
     day = tempMonth;
+  }
+
+  /**
+   * Optionally overrides the clock used for future-date validation. Defaults to the system clock in the default time zone.
+   *
+   * @param clock the clock, including the time zone used for the current date
+   * @return the updated builder
+   */
+  public InstantEdtfDateBuilder withClock(Clock clock) {
+    this.clock = Objects.requireNonNull(clock);
+    return this;
   }
 
   /**

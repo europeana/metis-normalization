@@ -8,47 +8,43 @@ import eu.europeana.normalization.dates.DateNormalizationExtractorMatchId;
 import eu.europeana.normalization.dates.DateNormalizationResult;
 import eu.europeana.normalization.dates.edtf.InstantEdtfDate;
 import eu.europeana.normalization.dates.edtf.InstantEdtfDateBuilder;
+import eu.europeana.normalization.dates.extraction.CenturyDateValidator;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
-import java.util.function.ToIntFunction;
+import java.time.Clock;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Extractor that matches centuries expressed using decimal numerals.
- * <p>Recognizes numbered centuries from 1 to 21, with optional ordinal suffixes,
- * and year prefixes from 10 to 21 followed by two dots. These forms use different conversions: a numbered century is reduced by
- * one, while a year prefix is used directly.</p>
+ * <p>Recognizes positive numbered centuries with optional ordinal suffixes, and two-digit year prefixes
+ * from 10 to 99 followed by two dots. Numbered centuries must have started and fit the supported date representation. These forms
+ * use different conversions: a numbered century is reduced by one, while a year prefix is used directly.</p>
  * <ul>
- *   <li>Value = 18.. | Outcome = 18XX</li>
- *   <li>Value = 1st century | Outcome = 00XX</li>
- *   <li>Value = 21st century | Outcome = 20XX</li>
- *   <li>Value = 21.. | Year prefix = 21XX</li>
+ *   <li>Value = {@code 18..} | Outcome = {@code 18XX}</li>
+ *   <li>Value = {@code 1st century} | Outcome = {@code 00XX}</li>
+ *   <li>Value = {@code 21st century} | Outcome = {@code 20XX}</li>
+ *   <li>Value = {@code 21..} | Year prefix = {@code 21XX}</li>
  * </ul>
  */
 public class CenturyNumericDateExtractor extends AbstractDateExtractor {
 
-  private static final String NUMERIC_10_TO_21_ENDING_DOTS_REGEX = "(1\\d|2[0-1])\\.{2}";
-  private static final String NUMERIC_1_TO_21_SUFFIXED_REGEX = "(2?1(?:st)?|2(?:nd)?|3(?:rd)?|(?:1\\d|[4-9]|20)(?:th)?)\\scentury";
+  private static final String YEAR_PREFIX_ENDING_DOTS_REGEX = "([1-9]\\d)\\.{2}";
+  private static final String NUMBERED_CENTURY_REGEX = "([1-9]\\d*|0)(st|nd|rd|th)?\\scentury";
+
+  private final Clock clock;
 
   private enum CenturyNumericDatePattern {
-    PATTERN_YYYY(
-        compile(OPTIONAL_QUESTION_MARK_REGEX + NUMERIC_10_TO_21_ENDING_DOTS_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
-            CASE_INSENSITIVE),
-        Integer::parseInt, DateNormalizationExtractorMatchId.CENTURY_NUMERIC),
-    PATTERN_ENGLISH(
-        compile(OPTIONAL_QUESTION_MARK_REGEX + NUMERIC_1_TO_21_SUFFIXED_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
-            CASE_INSENSITIVE),
-        century -> Integer.parseInt(century.replaceFirst("(?i)(st|nd|rd|th)$", "")) - 1,
-        DateNormalizationExtractorMatchId.CENTURY_NUMERIC);
+    PATTERN_YYYY(compile(OPTIONAL_QUESTION_MARK_REGEX + YEAR_PREFIX_ENDING_DOTS_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
+        CASE_INSENSITIVE), DateNormalizationExtractorMatchId.CENTURY_NUMERIC),
+    PATTERN_ENGLISH(compile(OPTIONAL_QUESTION_MARK_REGEX + NUMBERED_CENTURY_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
+        CASE_INSENSITIVE), DateNormalizationExtractorMatchId.CENTURY_NUMERIC);
 
     private final Pattern pattern;
-    private final ToIntFunction<String> centuryExtractorFunction;
     private final DateNormalizationExtractorMatchId dateNormalizationExtractorMatchId;
 
-    CenturyNumericDatePattern(Pattern pattern, ToIntFunction<String> centuryExtractorFunction,
-        DateNormalizationExtractorMatchId dateNormalizationExtractorMatchId) {
+    CenturyNumericDatePattern(Pattern pattern, DateNormalizationExtractorMatchId dateNormalizationExtractorMatchId) {
       this.pattern = pattern;
-      this.centuryExtractorFunction = centuryExtractorFunction;
       this.dateNormalizationExtractorMatchId = dateNormalizationExtractorMatchId;
     }
 
@@ -56,13 +52,25 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
       return pattern;
     }
 
-    public ToIntFunction<String> getCenturyExtractorFunction() {
-      return centuryExtractorFunction;
-    }
-
     public DateNormalizationExtractorMatchId getDateNormalizationExtractorMatchId() {
       return dateNormalizationExtractorMatchId;
     }
+  }
+
+  /**
+   * Creates an extractor using the system clock and default time zone.
+   */
+  public CenturyNumericDateExtractor() {
+    this(Clock.systemDefaultZone());
+  }
+
+  /**
+   * Creates an extractor using the supplied clock for temporal validation.
+   *
+   * @param clock the clock used by both century validation and the date builder
+   */
+  public CenturyNumericDateExtractor(Clock clock) {
+    this.clock = Objects.requireNonNull(clock);
   }
 
   @Override
@@ -72,9 +80,20 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
       final Matcher matcher = centuryNumericDatePattern.getPattern().matcher(inputValue);
       if (matcher.matches()) {
         final String century = matcher.group(1);
-        InstantEdtfDateBuilder instantEdtfDateBuilder = new InstantEdtfDateBuilder(
-            centuryNumericDatePattern.getCenturyExtractorFunction().applyAsInt(century))
-            .withYearPrecision(CENTURY);
+        final int numericValue;
+        try {
+          numericValue = Integer.parseInt(century);
+        } catch (NumberFormatException e) {
+          throw new DateExtractionException("Century number is too large", e);
+        }
+        if (centuryNumericDatePattern == CenturyNumericDatePattern.PATTERN_ENGLISH) {
+          validateOrdinalSuffix(century, matcher.group(2));
+          CenturyDateValidator.validate(numericValue, clock);
+        }
+        final int yearPrefix = (centuryNumericDatePattern == CenturyNumericDatePattern.PATTERN_ENGLISH)
+            ? (numericValue - 1) : numericValue;
+        InstantEdtfDateBuilder instantEdtfDateBuilder = new InstantEdtfDateBuilder(yearPrefix)
+            .withYearPrecision(CENTURY).withClock(clock);
         InstantEdtfDate instantEdtfDate = instantEdtfDateBuilder.withDateQualification(getQualification(inputValue))
                                                                 .withAllowDayMonthSwap(allowDayMonthSwap).build();
         dateNormalizationResult =
@@ -84,5 +103,25 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
       }
     }
     return dateNormalizationResult;
+  }
+
+  private static void validateOrdinalSuffix(String century, String suffix) throws DateExtractionException {
+    if (suffix == null) {
+      return;
+    }
+    final String expectedSuffix;
+    if (century.endsWith("11") || century.endsWith("12") || century.endsWith("13")) {
+      expectedSuffix = "th";
+    } else {
+      expectedSuffix = switch (century.charAt(century.length() - 1)) {
+        case '1' -> "st";
+        case '2' -> "nd";
+        case '3' -> "rd";
+        default -> "th";
+      };
+    }
+    if (!expectedSuffix.equalsIgnoreCase(suffix)) {
+      throw new DateExtractionException("Invalid ordinal suffix for century number");
+    }
   }
 }
