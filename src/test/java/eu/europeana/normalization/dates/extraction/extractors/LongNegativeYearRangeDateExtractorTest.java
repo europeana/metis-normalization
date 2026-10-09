@@ -27,6 +27,9 @@ class LongNegativeYearRangeDateExtractorTest implements DateExtractorTest {
   private static Stream<Arguments> extract() {
     return Stream.of(
         of("-12345/-12344", "Y-12345/Y-12344"),
+        of("-10001/-10000", "Y-10001/Y-10000"),
+        of("-10000/-09999", null),
+        of("-09999/-09998", null),
         of("-123456/-123455", "Y-123456/Y-123455"),
         of("-1234567/-1234566", "Y-1234567/Y-1234566"),
         of("-12345678/-12345677", "Y-12345678/Y-12345677"),

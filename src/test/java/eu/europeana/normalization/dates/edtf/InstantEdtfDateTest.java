@@ -1,10 +1,14 @@
 package eu.europeana.normalization.dates.edtf;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.params.provider.Arguments.of;
 
 import eu.europeana.normalization.dates.YearPrecision;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.stream.Stream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -42,4 +46,31 @@ class InstantEdtfDateTest {
     );
   }
 
+  @ParameterizedTest
+  @MethodSource
+  void preservesCalculatedBoundsBeyondToday(int year, YearPrecision precision, Integer month,
+      String expectedFirstDay, String expectedLastDay) throws DateExtractionException {
+    final Clock clock = Clock.fixed(Instant.parse("2050-06-15T00:00:00Z"), ZoneOffset.UTC);
+    final InstantEdtfDateBuilder builder = new InstantEdtfDateBuilder(year).withYearPrecision(precision).withClock(clock);
+    if (month != null) {
+      builder.withMonth(month);
+    }
+    final InstantEdtfDate date = builder.build();
+    final InstantEdtfDate firstDay = date.getFirstDay();
+    final InstantEdtfDate lastDay = date.getLastDay();
+
+    assertNotNull(firstDay);
+    assertNotNull(lastDay);
+    assertEquals(expectedFirstDay, firstDay.toString());
+    assertEquals(expectedLastDay, lastDay.toString());
+  }
+
+  private static Stream<Arguments> preservesCalculatedBoundsBeyondToday() {
+    return Stream.of(
+        of(2050, YearPrecision.YEAR, null, "2050-01-01", "2050-12-31"),
+        of(2050, YearPrecision.YEAR, 6, "2050-06-01", "2050-06-30"),
+        of(205, YearPrecision.DECADE, null, "2050-01-01", "2059-12-31"),
+        of(20, YearPrecision.CENTURY, null, "2001-01-01", "2100-12-31")
+    );
+  }
 }

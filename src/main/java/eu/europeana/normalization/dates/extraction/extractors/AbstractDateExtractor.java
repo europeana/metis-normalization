@@ -8,18 +8,16 @@ import eu.europeana.normalization.dates.DateNormalizationResult;
 import eu.europeana.normalization.dates.edtf.DateQualification;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
 import eu.europeana.normalization.dates.sanitize.DateFieldSanitizer;
-import java.lang.invoke.MethodHandles;
 import java.util.EnumSet;
 import java.util.Set;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Abstract class implementing interface {@link DateExtractor} with default functionality for all extractors
  */
+@Slf4j
 public abstract class AbstractDateExtractor implements DateExtractor {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   static final String OPTIONAL_QUESTION_MARK_REGEX = "\\??";
 
   /**
@@ -66,7 +64,7 @@ public abstract class AbstractDateExtractor implements DateExtractor {
     try {
       dateNormalizationResult = extract(sanitizedValue, flexibleDateBuild);
     } catch (DateExtractionException e) {
-      LOGGER.debug(format("Date extraction failed %s: ", sanitizedValue), e);
+      log.debug(format("Date extraction failed %s: ", sanitizedValue), e);
       dateNormalizationResult = getNoMatchResult(inputValue);
     }
 

@@ -54,23 +54,8 @@ public interface RangeDateExtractor<T extends DatesSeparator> {
   /**
    * Class wrapping a pair of start and end dates.
    */
-  class DateNormalizationResultRangePair {
+  record DateNormalizationResultRangePair(DateNormalizationResult startDateNormalizationResult,
+                                          DateNormalizationResult endDateNormalizationResult) {
 
-    final DateNormalizationResult startDateNormalizationResult;
-    final DateNormalizationResult endDateNormalizationResult;
-
-    public DateNormalizationResultRangePair(DateNormalizationResult startDateNormalizationResult,
-        DateNormalizationResult endDateNormalizationResult) {
-      this.startDateNormalizationResult = startDateNormalizationResult;
-      this.endDateNormalizationResult = endDateNormalizationResult;
-    }
-
-    public DateNormalizationResult getStartDateNormalizationResult() {
-      return startDateNormalizationResult;
-    }
-
-    public DateNormalizationResult getEndDateNormalizationResult() {
-      return endDateNormalizationResult;
-    }
   }
 }

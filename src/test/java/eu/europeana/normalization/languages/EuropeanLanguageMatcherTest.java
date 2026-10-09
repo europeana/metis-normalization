@@ -303,8 +303,8 @@ class EuropeanLanguageMatcherTest {
 
   private void assertMatch(LanguageMatch matchResult, String input, String expectedResult,
       Type expectedMatchType) {
-    assertEquals(input, matchResult.getInput());
-    assertEquals(expectedResult, matchResult.getMatch());
-    assertEquals(expectedMatchType, matchResult.getType());
+    assertEquals(input, matchResult.input());
+    assertEquals(expectedResult, matchResult.match());
+    assertEquals(expectedMatchType, matchResult.type());
   }
 }

@@ -1,5 +1,7 @@
 package eu.europeana.normalization.dates.extraction.extractors;
 
+import static eu.europeana.normalization.dates.edtf.InstantEdtfDateBuilder.THRESHOLD_4_DIGITS_YEAR;
+
 import eu.europeana.normalization.dates.DateNormalizationExtractorMatchId;
 import eu.europeana.normalization.dates.DateNormalizationResult;
 import eu.europeana.normalization.dates.edtf.DateBoundaryType;
@@ -9,6 +11,7 @@ import eu.europeana.normalization.dates.edtf.IntervalEdtfDate;
 import eu.europeana.normalization.dates.edtf.IntervalEdtfDateBuilder;
 import eu.europeana.normalization.dates.edtf.Iso8601Parser;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
+import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -102,6 +105,9 @@ public class DcmiPeriodDateExtractor extends AbstractDateExtractor {
       final String fieldValue = matcher.group(1);
       if (StringUtils.isNotBlank(fieldValue)) {
         TemporalAccessor temporalAccessor = ISO_8601_PARSER.parseDatePart(fieldValue);
+        if (Math.abs((long) temporalAccessor.get(ChronoField.YEAR)) > THRESHOLD_4_DIGITS_YEAR) {
+          throw new DateExtractionException("DCMI periods do not support years with more than four digits");
+        }
         instantEdtfDate = new InstantEdtfDateBuilder(temporalAccessor).withAllowDayMonthSwap(allowDayMonthSwap).build();
       }
       //if we find it again we declare invalid

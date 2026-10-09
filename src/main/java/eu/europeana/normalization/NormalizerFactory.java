@@ -20,8 +20,6 @@ import java.util.List;
  */
 public class NormalizerFactory {
 
-  private final NormalizerSettings settings;
-
   private static final NormalizerStep[] DEFAULT_NORMALIZER_STEPS = {
 
       // First: clean space characters, markup tags and IRI violations, thus normalizing text.
@@ -40,6 +38,8 @@ public class NormalizerFactory {
       NormalizerStep.DATES_NORMALIZER,
       NormalizerStep.NORMALIZE_PIDS
   };
+  private final NormalizerSettings settings;
+
 
   /**
    * Constructor for default settings.

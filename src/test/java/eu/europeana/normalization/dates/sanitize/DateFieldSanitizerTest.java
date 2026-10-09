@@ -154,7 +154,7 @@ class DateFieldSanitizerTest {
   void sanitize1stAnd2ndTimeDateProperty(SanitizeOperation expectedSanitizeOperation, String input, String expectedResult) {
     final SanitizedDate sanitize1stResult = DATE_FIELD_SANITIZER.sanitize1stTimeDateProperty(input);
     assertCleaner(DATE_FIELD_SANITIZER::sanitize2ndTimeDateProperty, expectedSanitizeOperation,
-        sanitize1stResult == null ? input : sanitize1stResult.getSanitizedDateString(), expectedResult);
+        sanitize1stResult == null ? input : sanitize1stResult.sanitizedDateString(), expectedResult);
   }
 
   private static Stream<Arguments> sanitize1stAnd2ndTimeDateProperty() {
@@ -252,8 +252,8 @@ class DateFieldSanitizerTest {
     if (expectedResult == null) {
       assertNull(sanitizedDate);
     } else {
-      assertEquals(expectedResult, sanitizedDate.getSanitizedDateString());
-      assertEquals(expectedSanitizeOperation, sanitizedDate.getSanitizeOperation());
+      assertEquals(expectedResult, sanitizedDate.sanitizedDateString());
+      assertEquals(expectedSanitizeOperation, sanitizedDate.sanitizeOperation());
     }
   }
 }

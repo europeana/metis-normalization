@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
  * <p>
  * This class also detects some patterns frequently used for adding notes to the dates, and removes such notes.
  * </p>
- * <p>Before any pattern is ran, multiple space characters are replaced by a single literal space character and the string is
+ * <p>Before any pattern is run, multiple space characters are replaced by a single literal space character and the string is
  * trimmed.</p>
  */
 public class DateFieldSanitizer {
@@ -55,7 +55,7 @@ public class DateFieldSanitizer {
    * Clean operations used for the date property first sanitization trial for the provided value.
    *
    * @param value the value to sanitize
-   * @return the sanitize result
+   * @return the sanitized result
    */
   public SanitizedDate sanitize1stTimeDateProperty(String value) {
     return sanitize(dateSanitizePatterns1stGroup, value);
@@ -75,7 +75,7 @@ public class DateFieldSanitizer {
    * Clean operations used for the generic sanitization trial for the provided value.
    *
    * @param value the value to sanitize
-   * @return the sanitize result
+   * @return the sanitized result
    */
   public SanitizedDate sanitizeGenericProperty(String value) {
     return sanitize(genericSanitizePatternsGroup, value);

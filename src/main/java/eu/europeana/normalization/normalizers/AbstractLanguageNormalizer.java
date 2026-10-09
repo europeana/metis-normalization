@@ -46,9 +46,9 @@ public abstract class AbstractLanguageNormalizer implements ValueNormalizeAction
     }
 
     // Return the result.
-    return matches.stream().map(LanguageMatch::getMatch).distinct()
-        .map(language -> new NormalizedValueWithConfidence(language, confidence))
-        .collect(Collectors.toList());
+    return matches.stream().map(LanguageMatch::match).distinct()
+                  .map(language -> new NormalizedValueWithConfidence(language, confidence))
+                  .collect(Collectors.toList());
   }
 
   /**
@@ -65,7 +65,7 @@ public abstract class AbstractLanguageNormalizer implements ValueNormalizeAction
     }
 
     // Do some analysis.
-    final Set<Type> matchTypes = matches.stream().map(LanguageMatch::getType)
+    final Set<Type> matchTypes = matches.stream().map(LanguageMatch::type)
         .collect(Collectors.toSet());
     final boolean justCodeMatches = matchTypes.size() == 1 && matchTypes.contains(Type.CODE_MATCH);
     final boolean justLabelMatches =
@@ -79,7 +79,7 @@ public abstract class AbstractLanguageNormalizer implements ValueNormalizeAction
       confidence = null;
     } else if (justCodeMatches && justOneMatch) {
       final LanguageMatch match = matches.get(0);
-      if (match.getInput().equals(match.getMatch())) {
+      if (match.input().equals(match.match())) {
         confidence = CONFIDENCE_SINGLE_CODE_EQUALS;
       } else {
         confidence = CONFIDENCE_SINGLE_CODE_KNOWN;

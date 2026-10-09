@@ -8,6 +8,7 @@ import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId
 import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId.DCMI_PERIOD;
 import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId.EDTF;
 import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId.FORMATTED_FULL_DATE;
+import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId.LONG_NEGATIVE_YEAR;
 import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId.MONTH_NAME;
 import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId.NUMERIC_ALL_VARIANTS;
 import static eu.europeana.normalization.dates.DateNormalizationExtractorMatchId.NUMERIC_ALL_VARIANTS_XX;
@@ -25,7 +26,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class DatesNormalizerTest implements DateExtractorTest {
 
-  private final static DatesNormalizer NORMALIZER = new DatesNormalizer();
+  private static final DatesNormalizer NORMALIZER = new DatesNormalizer();
 
   @ParameterizedTest
   @MethodSource
@@ -215,7 +216,11 @@ class DatesNormalizerTest implements DateExtractorTest {
         of("-3.6982", null, null),
         of("ISO9126", null, null),
         of("14:27", null, null),
-        of("-1234", "-1234", EDTF)
+        of("-1234", "-1234", EDTF),
+        of("Y-10000", "Y-10000", EDTF),
+        of("-10000", "Y-10000", LONG_NEGATIVE_YEAR),
+        of("Y-10001/Y-10000", "Y-10001/Y-10000", EDTF),
+        of("-10001/-10000", "Y-10001/Y-10000", LONG_NEGATIVE_YEAR)
     );
 
   }
@@ -228,6 +233,10 @@ class DatesNormalizerTest implements DateExtractorTest {
         of("[1989-11-01 - 1989-12-31]", "1989-11-01/1989-12-31", NUMERIC_RANGE_ALL_VARIANTS),
         of("1989-11-01 - 1989-12-31 (text in parentheses)", "1989-11-01/1989-12-31", NUMERIC_RANGE_ALL_VARIANTS),
         of("2013-09-07 09:31:51 UTC", "2013-09-07", FORMATTED_FULL_DATE),
+        of("Y-10000", "Y-10000", EDTF),
+        of("-10000", "Y-10000", LONG_NEGATIVE_YEAR),
+        of("Y-10001/Y-10000", "Y-10001/Y-10000", EDTF),
+        of("-10001/-10000", "Y-10001/Y-10000", LONG_NEGATIVE_YEAR),
         //Non precise/full dates
         of("18..", null, null),
         of("1918/1919", null, null),

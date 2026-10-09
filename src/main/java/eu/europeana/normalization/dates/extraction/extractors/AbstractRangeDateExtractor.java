@@ -10,7 +10,6 @@ import eu.europeana.normalization.dates.extraction.DatesSeparator;
 import eu.europeana.normalization.dates.sanitize.DateFieldSanitizer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * The abstract class adding the option to a reusable range extractor functionality.
@@ -32,11 +31,11 @@ public abstract class AbstractRangeDateExtractor<T extends DatesSeparator> exten
    * Extract the date normalization result for a range.
    * <p>
    * The date is split in two boundaries using the {@link T} to provide the separators. The result will contain the first split
-   * that is exactly splitting the original value in two parts(boundaries) and those two boundaries are valid parsable boundaries
+   *  exactly splitting the original value in two parts(boundaries), and those two boundaries are valid parsable boundaries
    * or null if none found.
    * </p>
    *
-   * @param inputValue the range value to attempt parsing
+   * @param inputValue the range value to attempt to parse
    * @param flexibleDateBuild the flag indicating if during creating of the dates we are flexible with validation
    * @return the date normalization result
    * @throws DateExtractionException if anything happened during the extraction of the date
@@ -47,13 +46,12 @@ public abstract class AbstractRangeDateExtractor<T extends DatesSeparator> exten
     for (T rangeDateQualifier : getRangeDateQualifiers()) {
       final List<String> sanitizedDateList =
           Arrays.stream(inputValue.split(rangeDateQualifier.getStringRepresentation(), KEEP_EMPTY_SPLITS_LIMIT_VALUE))
-                .map(DateFieldSanitizer::cleanSpacesAndTrim).collect(
-                    Collectors.toList());
+                .map(DateFieldSanitizer::cleanSpacesAndTrim).toList();
       if (sanitizedDateList.size() == VALID_SPLIT_SIZE) {
         final DateNormalizationResultRangePair dateNormalizationResultRangePair = extractDateNormalizationResult(
             sanitizedDateList.get(0), sanitizedDateList.get(1), rangeDateQualifier, flexibleDateBuild);
-        final DateNormalizationResult startResult = dateNormalizationResultRangePair.getStartDateNormalizationResult();
-        final DateNormalizationResult endResult = dateNormalizationResultRangePair.getEndDateNormalizationResult();
+        final DateNormalizationResult startResult = dateNormalizationResultRangePair.startDateNormalizationResult();
+        final DateNormalizationResult endResult = dateNormalizationResultRangePair.endDateNormalizationResult();
         if (isRangeMatchSuccess(rangeDateQualifier, startResult, endResult)) {
           final DateNormalizationExtractorMatchId dateNormalizationExtractorMatchId =
               getDateNormalizationExtractorId(startResult, endResult);

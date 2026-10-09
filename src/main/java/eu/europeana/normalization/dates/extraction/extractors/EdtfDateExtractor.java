@@ -10,24 +10,23 @@ import eu.europeana.normalization.dates.edtf.InstantEdtfDate;
 import eu.europeana.normalization.dates.edtf.InstantEdtfDateBuilder;
 import eu.europeana.normalization.dates.edtf.Iso8601Parser;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
-import java.lang.invoke.MethodHandles;
+import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.regex.Matcher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * The pattern for EDTF dates and compatible with ISO 8601 dates.
  * <p>This parser supports partial Level0 and Level1 from the <a href="https://www.loc.gov/standards/datetime/">Extended
- * Date/Time Format (EDTF) Specification</a>. It only validates the date part of a date and the time if existent is discarded.
- * Specifically from Level1, seasons and unspecified digit(s) from the right are not supported
+ * Date/Time Format (EDTF) Specification</a>. It only validates the date part of a date, and the time, if existent, is discarded.
+ * Specifically, from Level1, seasons and unspecified digit(s) from the right are not supported
  * </p>
  */
+@Slf4j
 public class EdtfDateExtractor extends AbstractDateExtractor {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final Iso8601Parser ISO_8601_PARSER = new Iso8601Parser();
 
   @Override
@@ -40,7 +39,7 @@ public class EdtfDateExtractor extends AbstractDateExtractor {
     final InstantEdtfDate instantEdtfDate;
     final Integer moreThanFourDigitsYear = getMoreThanFourDigitsYear(dateInput);
     if (moreThanFourDigitsYear != null) {
-      instantEdtfDate = new InstantEdtfDateBuilder(moreThanFourDigitsYear).withMoreThanFourDigitsYear().build();
+      instantEdtfDate = new InstantEdtfDateBuilder(moreThanFourDigitsYear).build();
     } else {
       instantEdtfDate = extractInstantEdtfDate(dateInput, allowDayMonthSwap);
     }
@@ -56,10 +55,10 @@ public class EdtfDateExtractor extends AbstractDateExtractor {
         //Try parsing year
         longYear = Integer.parseInt(yearSubstring);
       } catch (NumberFormatException er) {
-        LOGGER.debug("Not a valid integer at this stage");
+        log.debug("Not a valid integer at this stage");
       }
       //If prefixed we have to be strict on the length
-      if (longYear != null && Math.abs(longYear) <= THRESHOLD_4_DIGITS_YEAR) {
+      if (longYear != null && Math.abs((long) longYear) <= THRESHOLD_4_DIGITS_YEAR) {
         longYear = null;
       }
     }
@@ -86,6 +85,9 @@ public class EdtfDateExtractor extends AbstractDateExtractor {
     }
 
     final TemporalAccessor temporalAccessor = ISO_8601_PARSER.parseDatePart(dateInputStrippedModifier);
+    if (Math.abs((long) temporalAccessor.get(ChronoField.YEAR)) > THRESHOLD_4_DIGITS_YEAR) {
+      throw new DateExtractionException("EDTF years with more than four digits require the 'Y' prefix");
+    }
     return new InstantEdtfDateBuilder(temporalAccessor)
         .withDateQualification(dateQualifications)
         .withAllowDayMonthSwap(allowDayMonthSwap)

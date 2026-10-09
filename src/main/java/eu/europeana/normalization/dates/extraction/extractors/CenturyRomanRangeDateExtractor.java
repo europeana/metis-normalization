@@ -5,6 +5,7 @@ import eu.europeana.normalization.dates.DateNormalizationResult;
 import eu.europeana.normalization.dates.DateNormalizationResultStatus;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
 import eu.europeana.normalization.dates.extraction.DefaultDatesSeparator;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -15,15 +16,31 @@ import java.util.List;
  */
 public class CenturyRomanRangeDateExtractor extends AbstractRangeDateExtractor<DefaultDatesSeparator> {
 
-  private static final CenturyRomanDateExtractor ROMAN_CENTURY_DATE_EXTRACTOR = new CenturyRomanDateExtractor();
+  private final CenturyRomanDateExtractor romanCenturyDateExtractor;
+
+  /**
+   * Creates a range extractor using the system clock and default time zone.
+   */
+  public CenturyRomanRangeDateExtractor() {
+    this(Clock.systemDefaultZone());
+  }
+
+  /**
+   * Creates a range extractor whose endpoints use the supplied clock.
+   *
+   * @param clock the clock used to validate both century endpoints
+   */
+  public CenturyRomanRangeDateExtractor(Clock clock) {
+    romanCenturyDateExtractor = new CenturyRomanDateExtractor(clock);
+  }
 
   @Override
   public DateNormalizationResultRangePair extractDateNormalizationResult(String startString, String endString,
       DefaultDatesSeparator rangeDateDelimiters,
       boolean allowDayMonthSwap) throws DateExtractionException {
     return new DateNormalizationResultRangePair(
-        ROMAN_CENTURY_DATE_EXTRACTOR.extract(startString, allowDayMonthSwap),
-        ROMAN_CENTURY_DATE_EXTRACTOR.extract(endString, allowDayMonthSwap));
+        romanCenturyDateExtractor.extract(startString, allowDayMonthSwap),
+        romanCenturyDateExtractor.extract(endString, allowDayMonthSwap));
   }
 
   @Override

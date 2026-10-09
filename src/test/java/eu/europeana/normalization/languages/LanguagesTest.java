@@ -35,8 +35,8 @@ class LanguagesTest {
 
     // Check the original name.
     final Set<String> originalNames =
-        dutch.getOriginalNames().stream().filter(label -> label.getLanguage().equals("nld"))
-            .map(LanguageLabel::getLabel).collect(Collectors.toSet());
+        dutch.getOriginalNames().stream().filter(label -> label.language().equals("nld"))
+             .map(LanguageLabel::label).collect(Collectors.toSet());
     assertTrue(originalNames.contains("Nederlands"));
 
     // No alternative name known.
@@ -44,8 +44,8 @@ class LanguagesTest {
 
     // Check labels for English
     final Set<String> labels =
-        dutch.getLabels().stream().filter(label -> label.getLanguage().equals("eng"))
-            .map(LanguageLabel::getLabel).collect(Collectors.toSet());
+        dutch.getLabels().stream().filter(label -> label.language().equals("eng"))
+             .map(LanguageLabel::label).collect(Collectors.toSet());
     assertTrue(labels.contains("Dutch"));
   }
 

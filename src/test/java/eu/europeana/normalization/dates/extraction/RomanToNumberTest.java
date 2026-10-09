@@ -1,7 +1,6 @@
 package eu.europeana.normalization.dates.extraction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.params.provider.Arguments.of;
 
 import java.util.stream.Stream;
@@ -16,72 +15,73 @@ class RomanToNumberTest {
 
   private static Stream<Arguments> numberData() {
     return Stream.of(
-        of("I", 1, true),
-        of("II", 2, true),
-        of("III", 3, true),
-        //Arguments.of("IIII", 4, false), //TODO: this is not valid
-        of("IV", 4, true),
-        of("V", 5, true),
-        of("VI", 6, true),
-        of("VII", 7, true),
-        //Arguments.of("VIII", 8, true),   //TODO: this is not valid
-        of("IX", 9, true),
-        of("X", 10, true),
-        //Arguments.of("VV", 10, false), //TODO: this is not valid
-        of("XI", 11, true),
-        of("XII", 12, true),
-        of("XIII", 13, true),
-        of("XIV", 14, true),
-        //Arguments.of("XIIII", 14, false), //TODO: this is not valid
-        of("XV", 15, true),
-        of("XVI", 16, true),
-        of("XVII", 17, true),
-        of("XVIII", 18, true),
-        of("XIX", 19, true),
-        of("XX", 20, true),
-        of("XXI", 21, true),
-        //Arguments.of("XVVI", 21, true), //TODO: this is not valid
-        of("XXII", 22, true),
-        of("XXIII", 23, true),
-        of("XXIV", 24, true),
-        of("XXV", 25, true),
-        of("XXVI", 26, true),
-        of("XXVII", 27, true),
-        of("XXVIII", 28, true),
-        of("XXIX", 29, true),
-        of("XXX", 30, true),
-        of("XXXI", 31, true),
-        of("XXXIV", 34, true),
-        of("XXXV", 35, true),
-        //Arguments.of("VXL", 35, false), //TODO: this is not valid
-        of("XL", 40, true),
-        of("XLI", 41, true),
-        //Arguments.of("XXXXI", 41, false), //TODO: this is not valid
-        of("XLII", 42, true),
-        of("XLIII", 43, true),
-        of("XLIV", 44, true),
-        of("XLV", 45, true),
-        of("XLVI", 46, true),
-        of("XLVII", 47, true),
-        of("XLVIII", 48, true),
-        //Arguments.of("XLIVV", 49, false), //TODO: this is not valid
-        of("XLIX", 49, true),
-        of("L", 50, true),
-        of("LI", 51, true),
-        of("LII", 52, true),
-        of("MCMLXXVI", 1976, true),
-        of("MCMXCVIII", 1998, true),
-        of("MMXXII", 2022, true)
+        of("I", 1),
+        of("II", 2),
+        of("III", 3),
+        of("IV", 4),
+        of("V", 5),
+        of("VI", 6),
+        of("VII", 7),
+        of("VIII", 8),
+        of("IX", 9),
+        of("X", 10),
+        of("XI", 11),
+        of("XII", 12),
+        of("XIII", 13),
+        of("XIV", 14),
+        of("XV", 15),
+        of("XVI", 16),
+        of("XVII", 17),
+        of("XVIII", 18),
+        of("XIX", 19),
+        of("XX", 20),
+        of("XXI", 21),
+        of("XXII", 22),
+        of("XXIII", 23),
+        of("XXIV", 24),
+        of("XXV", 25),
+        of("XXVI", 26),
+        of("XXVII", 27),
+        of("XXVIII", 28),
+        of("XXIX", 29),
+        of("XXX", 30),
+        of("XXXI", 31),
+        of("XXXIV", 34),
+        of("XXXV", 35),
+        of("XL", 40),
+        of("XLI", 41),
+        of("XLII", 42),
+        of("XLIII", 43),
+        of("XLIV", 44),
+        of("XLV", 45),
+        of("XLVI", 46),
+        of("XLVII", 47),
+        of("XLVIII", 48),
+        of("XLIX", 49),
+        of("L", 50),
+        of("LI", 51),
+        of("LII", 52),
+        of("XC", 90),
+        of("C", 100),
+        of("CD", 400),
+        of("D", 500),
+        of("CM", 900),
+        of("M", 1000),
+        of("MCMLXXVI", 1976),
+        of("MCMXCVIII", 1998),
+        of("MMXXII", 2022),
+        of("MMMDCCCLXXXVIII", 3888),
+        of("MMMCMXCIX", 3999),
+        of("i", 1),
+        of("iv", 4),
+        of("xIv", 14),
+        of("mCmXcIx", 1999)
     );
   }
 
   @ParameterizedTest
   @MethodSource("numberData")
-  void romanToDecimal(String romanNumber, Integer expectedNumber, Boolean isSuccess) {
-    if (isSuccess) {
-      assertEquals(expectedNumber, RomanToNumber.romanToDecimal(romanNumber));
-    } else {
-      assertNotEquals(expectedNumber, RomanToNumber.romanToDecimal(romanNumber));
-    }
+  void romanToDecimal(String romanNumber, int expectedNumber) {
+    assertEquals(expectedNumber, RomanToNumber.romanToDecimal(romanNumber));
   }
 }
