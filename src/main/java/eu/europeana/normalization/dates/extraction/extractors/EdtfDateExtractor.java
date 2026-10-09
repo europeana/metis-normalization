@@ -11,6 +11,7 @@ import eu.europeana.normalization.dates.edtf.InstantEdtfDateBuilder;
 import eu.europeana.normalization.dates.edtf.Iso8601Parser;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
 import java.lang.invoke.MethodHandles;
+import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.util.EnumSet;
 import java.util.Set;
@@ -40,7 +41,7 @@ public class EdtfDateExtractor extends AbstractDateExtractor {
     final InstantEdtfDate instantEdtfDate;
     final Integer moreThanFourDigitsYear = getMoreThanFourDigitsYear(dateInput);
     if (moreThanFourDigitsYear != null) {
-      instantEdtfDate = new InstantEdtfDateBuilder(moreThanFourDigitsYear).withMoreThanFourDigitsYear().build();
+      instantEdtfDate = new InstantEdtfDateBuilder(moreThanFourDigitsYear).build();
     } else {
       instantEdtfDate = extractInstantEdtfDate(dateInput, allowDayMonthSwap);
     }
@@ -59,7 +60,7 @@ public class EdtfDateExtractor extends AbstractDateExtractor {
         LOGGER.debug("Not a valid integer at this stage");
       }
       //If prefixed we have to be strict on the length
-      if (longYear != null && Math.abs(longYear) <= THRESHOLD_4_DIGITS_YEAR) {
+      if (longYear != null && Math.abs((long) longYear) <= THRESHOLD_4_DIGITS_YEAR) {
         longYear = null;
       }
     }
@@ -86,6 +87,9 @@ public class EdtfDateExtractor extends AbstractDateExtractor {
     }
 
     final TemporalAccessor temporalAccessor = ISO_8601_PARSER.parseDatePart(dateInputStrippedModifier);
+    if (Math.abs((long) temporalAccessor.get(ChronoField.YEAR)) > THRESHOLD_4_DIGITS_YEAR) {
+      throw new DateExtractionException("EDTF years with more than four digits require the 'Y' prefix");
+    }
     return new InstantEdtfDateBuilder(temporalAccessor)
         .withDateQualification(dateQualifications)
         .withAllowDayMonthSwap(allowDayMonthSwap)

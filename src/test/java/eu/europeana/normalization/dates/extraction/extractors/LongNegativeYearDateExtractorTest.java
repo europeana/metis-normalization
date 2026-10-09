@@ -24,9 +24,34 @@ class LongNegativeYearDateExtractorTest implements DateExtractorTest {
     assertDateNormalizationResult(dateNormalizationResult, expected, DateNormalizationExtractorMatchId.LONG_NEGATIVE_YEAR);
   }
 
+  @ParameterizedTest
+  @MethodSource
+  void preservesLongYearsForGenericProperties(String input, String expected) {
+    final DateNormalizationResult result = LONG_NEGATIVE_YEAR_DATE_EXTRACTOR.extractGenericProperty(input);
+    assertDateNormalizationResult(result, expected, DateNormalizationExtractorMatchId.LONG_NEGATIVE_YEAR);
+  }
+
+  private static Stream<Arguments> preservesLongYearsForGenericProperties() {
+    return Stream.of(
+        of("-10000", "Y-10000"),
+        of("-999999999", "Y-999999999"),
+        of("-00010000", "Y-10000"),
+        of("-9999", null),
+        of("-09999", null),
+        of("-00001", null),
+        of("10000", null)
+    );
+  }
+
   private static Stream<Arguments> extract() {
     return Stream.of(
         of("-12345", "Y-12345"),
+        of("-10000", "Y-10000"),
+        of("-999999999", "Y-999999999"),
+        of("-00010000", "Y-10000"),
+        of("-09999", null),
+        of("-00001", null),
+        of("00000", null),
         of("-123456", "Y-123456"),
         of("-1234567", "Y-1234567"),
         of("-12345678", "Y-12345678"),

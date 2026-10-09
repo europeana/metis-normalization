@@ -4,10 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.params.provider.Arguments.of;
 
+import eu.europeana.normalization.dates.YearPrecision;
 import eu.europeana.normalization.model.RecordWrapper;
 import eu.europeana.normalization.util.Namespace;
 import eu.europeana.normalization.util.NormalizationException;
 import eu.europeana.normalization.util.XmlUtil;
+import java.time.Month;
+import java.time.Year;
+import java.time.YearMonth;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -151,6 +155,50 @@ class DatesNormalizerXmlTest {
         of("altLabel", "en", "nl", 1),
         of("altLabel", "en", "EN", 1)
     );
+  }
+
+  @Test
+  void preservesFullBoundsOfTwentyFirstCentury() throws NormalizationException {
+    final Element timeSpan = getTimeSpan(normalize(dateField("21st century", "")));
+
+    assertDateValues(timeSpan, "2001-01-01", "2100-12-31", "20XX");
+    assertEquals(List.of("http://data.europeana.eu/timespan/21"),
+        children(timeSpan, Namespace.DCTERMS, "isPartOf").stream()
+            .map(element -> element.getAttributeNS(Namespace.RDF.getUri(), "resource")).toList());
+  }
+
+  @ParameterizedTest
+  @MethodSource
+  void preservesFullBoundsOfCurrentYearAndMonth(String input, String expectedBegin, String expectedEnd)
+      throws NormalizationException {
+    final Element timeSpan = getTimeSpan(normalize(dateField(input, "")));
+
+    assertDateValues(timeSpan, expectedBegin, expectedEnd, input);
+  }
+
+  private static Stream<Arguments> preservesFullBoundsOfCurrentYearAndMonth() {
+    final YearMonth currentMonth = YearMonth.now();
+    final Year currentYear = Year.of(currentMonth.getYear());
+    return Stream.of(
+        of(currentYear.toString(), currentYear.atDay(1).toString(), currentYear.atMonth(Month.DECEMBER).atEndOfMonth().toString()),
+        of(currentMonth.toString(), currentMonth.atDay(1).toString(), currentMonth.atEndOfMonth().toString())
+    );
+  }
+
+  @Test
+  void preservesEndOfOpenIntervalInCurrentYear() throws NormalizationException {
+    final Year currentYear = Year.now();
+    final String input = "../" + currentYear;
+    final Element timeSpan = getTimeSpan(normalize(dateField(input, "")));
+
+    assertEquals(List.of(), children(timeSpan, Namespace.EDM, "begin"));
+    assertEquals(List.of(currentYear.atMonth(Month.DECEMBER).atEndOfMonth().toString()),
+        children(timeSpan, Namespace.EDM, "end").stream().map(Element::getTextContent).toList());
+    assertEquals(input, children(timeSpan, Namespace.SKOS, "notation").getFirst().getTextContent());
+    final int century = (currentYear.getValue() - 1) / YearPrecision.CENTURY.getDuration() + 1;
+    assertEquals(List.of("http://data.europeana.eu/timespan/" + century),
+        children(timeSpan, Namespace.DCTERMS, "isPartOf").stream()
+            .map(element -> element.getAttributeNS(Namespace.RDF.getUri(), "resource")).toList());
   }
 
   private Document normalize(String fields) throws NormalizationException {

@@ -61,6 +61,25 @@ class EdtfDateExtractorTest implements DateExtractorTest {
     assertExtract(input, expected);
   }
 
+  @ParameterizedTest
+  @MethodSource
+  void preservesLongYearSyntaxForGenericProperties(String input, String expected) {
+    final DateNormalizationResult result = EDTF_DATE_EXTRACTOR.extractGenericProperty(input);
+    assertDateNormalizationResult(result, expected, DateNormalizationExtractorMatchId.EDTF);
+  }
+
+  private static Stream<Arguments> preservesLongYearSyntaxForGenericProperties() {
+    return Stream.of(
+        of("Y-10000", "Y-10000"),
+        of("Y-999999999", "Y-999999999"),
+        of("-10000", null),
+        of("-10000-01-01", null),
+        of("Y-9999", null),
+        of("-9999", null),
+        of("-9999-01-01", "-9999-01-01")
+    );
+  }
+
   private static Stream<Arguments> completeDateRepresentationLevel0() {
     return Stream.of(
         of("1989-11-01", "1989-11-01"),
@@ -128,6 +147,8 @@ class EdtfDateExtractorTest implements DateExtractorTest {
   private static Stream<Arguments> letterPrefixedCalendarYearLevel1() {
     return Stream.of(
         of("Y-123456789", "Y-123456789"),
+        of("Y-999999999", "Y-999999999"),
+        of("Y-00010000", "Y-10000"),
         //Non prefixed
         of("-123456789", null),
         //Future dates are not valid
@@ -161,7 +182,12 @@ class EdtfDateExtractorTest implements DateExtractorTest {
         of("-1989", "-1989"),
         of("-9999", "-9999"),
         of("-0989", "-0989"),
-        of("-11989", null)
+        of("-11989", null),
+        of("-10000", null),
+        of("-10000-01-01", null),
+        of("-10000-01", null),
+        of("-10000T00:00:00", null),
+        of("-9999-01-01", "-9999-01-01")
     );
   }
 }

@@ -26,10 +26,30 @@ class DcmiPeriodDateExtractorTest implements DateExtractorTest {
         expectedLabel);
   }
 
+  @ParameterizedTest
+  @MethodSource
+  void preservesYearLimitForGenericProperties(String input, String expected) {
+    final DateNormalizationResult result = DCMI_PERIOD_DATE_EXTRACTOR.extractGenericProperty(input);
+    assertDateNormalizationResult(result, expected, DateNormalizationExtractorMatchId.DCMI_PERIOD);
+  }
+
+  private static Stream<Arguments> preservesYearLimitForGenericProperties() {
+    return Stream.of(
+        of("start=-9999-01-01;", "-9999-01-01/.."),
+        of("start=-10000-01-01;", null),
+        of("end=-10000-12-31;", null),
+        of("start=Y-10000;", null)
+    );
+  }
+
   private static Stream<Arguments> extractData() {
     return Stream.of(
 
-    of("name=Middle Jurassic; start=-174100000; end=-163500000", null, null),
+        of("name=Middle Jurassic; start=-174100000; end=-163500000", null, null),
+        of("start=-9999;", "-9999/..", null),
+        of("start=-10000;", null, null),
+        of("end=-10000;", null, null),
+        of("start=Y-10000;", null, null),
         of("name=The Great Depression; start=1929; end=1939;", "1929/1939", "The Great Depression"),
         of("name=Haagse International Arts Festival, 2000; start=2000-01-26; end=2000-02-20;",
             "2000-01-26/2000-02-20", "Haagse International Arts Festival, 2000"),

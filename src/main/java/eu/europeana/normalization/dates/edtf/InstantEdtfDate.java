@@ -101,6 +101,7 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
   /**
    * Returns the lower bound according to the date's precision and the normalization conventions described in this class. For
    * example, {@code 1900} starts on 1900-01-01, whereas century-precision {@code 19XX} starts on 1901-01-01.
+   * Calculated bounds are allowed to lie in the future; future-date validation applies to the original input.
    *
    * @return the lower bound, or {@code null} for an open or unknown boundary or if construction fails
    * @see #firstDayOfYearDatePart()
@@ -111,7 +112,7 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
     try {
       if (dateBoundaryType == DECLARED) {
         if (this.getYear().getValue() < -THRESHOLD_4_DIGITS_YEAR) {
-          firstDay = new InstantEdtfDateBuilder(this.getYear().getValue()).build();
+          firstDay = new InstantEdtfDateBuilder(this.getYear().getValue()).buildBoundary();
         } else {
           firstDay = this.firstDayOfYearDatePart();
         }
@@ -148,12 +149,14 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
       temporalAccessorFirstDay = year.plusYears(yearPrecision == YearPrecision.CENTURY ? 1 : 0).atMonthDay(january01);
     }
 
-    return new InstantEdtfDateBuilder(temporalAccessorFirstDay).build();
+    return new InstantEdtfDateBuilder(temporalAccessorFirstDay).buildBoundary();
   }
 
   /**
    * Returns the upper bound according to the date's precision and the normalization conventions described in this class. For
    * example, {@code 1900} ends on 1900-12-31, whereas century-precision {@code 19XX} ends on 2000-12-31.
+   * Calculated bounds are allowed to lie in the future. For example, an accepted {@code 20XX} retains its upper bound of
+   * 2100-12-31 even before that day arrives; future-date validation applies to the original input.
    *
    * @return the upper bound, or {@code null} for an open or unknown boundary or if construction fails
    * @see #lastDayOfYearDatePart()
@@ -164,7 +167,7 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
     try {
       if (dateBoundaryType == DECLARED) {
         if (this.getYear().getValue() < -THRESHOLD_4_DIGITS_YEAR) {
-          lastDay = new InstantEdtfDateBuilder(this.getYear().getValue()).build();
+          lastDay = new InstantEdtfDateBuilder(this.getYear().getValue()).buildBoundary();
         } else {
           lastDay = this.lastDayOfYearDatePart();
         }
@@ -206,7 +209,7 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
       final MonthDay december31 = MonthDay.of(Month.DECEMBER, Month.DECEMBER.maxLength());
       temporalAccessorLastDay = adjustedYear.atMonthDay(december31);
     }
-    return new InstantEdtfDateBuilder(temporalAccessorLastDay).build();
+    return new InstantEdtfDateBuilder(temporalAccessorLastDay).buildBoundary();
 
   }
 

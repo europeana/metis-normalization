@@ -1,7 +1,5 @@
 package eu.europeana.normalization.dates.edtf;
 
-import static java.lang.String.format;
-
 import eu.europeana.normalization.dates.YearPrecision;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
 import java.lang.invoke.MethodHandles;
@@ -21,6 +19,9 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Builder class for {@link InstantEdtfDate}.
+ * <p>Years with an absolute value greater than {@link #THRESHOLD_4_DIGITS_YEAR} are recognized automatically from the numeric
+ * year after applying its precision. Extractors validate the input notation, including the EDTF {@code Y} prefix, before
+ * passing numeric values to this builder. Long years remain exempt from the strict profile's complete-date requirement.
  * <p>During {@link #build()} it will verify all the parameters that have been requested.
  * The {@link #build()}, if {@link #withAllowDayMonthSwap(boolean)} was called with {@code true}, will also attempt a second time
  * by switching month and day values if the original values were invalid. Furthermore, there are a set of constructors that can
@@ -45,7 +46,6 @@ public class InstantEdtfDateBuilder {
   private YearPrecision yearPrecision = YearPrecision.YEAR;
   private final Set<DateQualification> dateQualifications = EnumSet.noneOf(DateQualification.class);
   private boolean allowDayMonthSwap = true;
-  private boolean isMoreThanFourDigitsYear = false;
   private Clock clock = Clock.systemDefaultZone();
 
   /**
@@ -81,11 +81,26 @@ public class InstantEdtfDateBuilder {
    * @throws DateExtractionException if something went wrong during date validation
    */
   public InstantEdtfDate build() throws DateExtractionException {
-    InstantEdtfDate instantEdtfDate = buildInternal();
+    return build(true);
+  }
+
+  /**
+   * Builds a calculated boundary of an already validated date. Calendar, year-range, and strict-profile validation still apply,
+   * but a calculated boundary may lie in the future when the source date has coarse precision.
+   *
+   * @return the calculated boundary
+   * @throws DateExtractionException if the boundary is invalid
+   */
+  InstantEdtfDate buildBoundary() throws DateExtractionException {
+    return build(false);
+  }
+
+  private InstantEdtfDate build(boolean validateFutureDate) throws DateExtractionException {
+    InstantEdtfDate instantEdtfDate = buildInternal(validateFutureDate);
     //Try once more if flexible date
     if (instantEdtfDate == null && isPositive(month) && isPositive(day) && allowDayMonthSwap) {
       swapMonthDay();
-      instantEdtfDate = buildInternal();
+      instantEdtfDate = buildInternal(validateFutureDate);
     }
 
     //Still nothing, we are done.
@@ -95,12 +110,14 @@ public class InstantEdtfDateBuilder {
     return instantEdtfDate;
   }
 
-  private InstantEdtfDate buildInternal() {
+  private InstantEdtfDate buildInternal(boolean validateFutureDate) {
     InstantEdtfDate instantEdtfDate = null;
     try {
       parseYear();
       parseMonthDay();
-      validateDateNotInFuture();
+      if (validateFutureDate) {
+        validateDateNotInFuture();
+      }
       validateStrict();
       instantEdtfDate = new InstantEdtfDate(this);
     } catch (DateTimeException | DateExtractionException e) {
@@ -109,17 +126,9 @@ public class InstantEdtfDateBuilder {
     return instantEdtfDate;
   }
 
-  private void parseYear() throws DateExtractionException {
+  private void parseYear() {
     Objects.requireNonNull(year, "Year value can never be null");
-    if (isMoreThanFourDigitsYear && Math.abs(year) <= THRESHOLD_4_DIGITS_YEAR) {
-      throw new DateExtractionException(
-          format("isLongerThanFourDigitsYear is %s indicating that year should have absolute value greater than %s",
-              true, THRESHOLD_4_DIGITS_YEAR));
-    } else if (!isMoreThanFourDigitsYear && Math.abs(year) > THRESHOLD_4_DIGITS_YEAR) {
-      throw new DateExtractionException(
-          format("Year absolute value is greater than %s, and isLongerThanFourDigitsYear is %s", THRESHOLD_4_DIGITS_YEAR, false));
-    }
-    yearObj = Year.of(year * yearPrecision.getDuration());
+    yearObj = Year.of(ChronoField.YEAR.checkValidIntValue((long) year * yearPrecision.getDuration()));
   }
 
   private void parseMonthDay() throws DateExtractionException {
@@ -158,12 +167,13 @@ public class InstantEdtfDateBuilder {
 
   private void validateStrict() throws DateExtractionException {
     //If it is not a long year, and we want to be strict we further validate
-    boolean isNotMoreThanFourDigitsYearAndStrictBuild = !isMoreThanFourDigitsYear && !allowDayMonthSwap;
+    boolean isFourDigitYearAndStrictBuild = Math.abs(yearObj.getValue()) <= THRESHOLD_4_DIGITS_YEAR
+        && !allowDayMonthSwap;
     boolean isDateNonPrecise =
         dateQualifications.contains(DateQualification.UNCERTAIN) || (yearPrecision != null
             && yearPrecision != YearPrecision.YEAR);
     boolean notCompleteDate = monthObj == null || yearMonthDayObj == null;
-    if (isNotMoreThanFourDigitsYearAndStrictBuild && (isDateNonPrecise || notCompleteDate)) {
+    if (isFourDigitYearAndStrictBuild && (isDateNonPrecise || notCompleteDate)) {
       throw new DateExtractionException("Date is invalid according to our strict profile!");
     }
   }
@@ -237,16 +247,6 @@ public class InstantEdtfDateBuilder {
    */
   public InstantEdtfDateBuilder withAllowDayMonthSwap(boolean allowDayMonthSwap) {
     this.allowDayMonthSwap = allowDayMonthSwap;
-    return this;
-  }
-
-  /**
-   * Declare the date is of long year format, prefixed with 'Y'.
-   *
-   * @return the extended builder
-   */
-  public InstantEdtfDateBuilder withMoreThanFourDigitsYear() {
-    this.isMoreThanFourDigitsYear = true;
     return this;
   }
 

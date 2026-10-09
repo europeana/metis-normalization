@@ -1,5 +1,7 @@
 package eu.europeana.normalization.dates.extraction.extractors;
 
+import static eu.europeana.normalization.dates.edtf.InstantEdtfDateBuilder.THRESHOLD_4_DIGITS_YEAR;
+
 import eu.europeana.normalization.dates.DateNormalizationExtractorMatchId;
 import eu.europeana.normalization.dates.DateNormalizationResult;
 import eu.europeana.normalization.dates.edtf.InstantEdtfDate;
@@ -22,9 +24,11 @@ public class LongNegativeYearDateExtractor extends AbstractDateExtractor {
     final Matcher matcher = YEAR_PATTERN.matcher(inputValue);
     if (matcher.matches()) {
       final int year = Integer.parseInt(matcher.group(1));
+      if (Math.abs(year) <= THRESHOLD_4_DIGITS_YEAR) {
+        throw new DateExtractionException("Long years must have an absolute value greater than " + THRESHOLD_4_DIGITS_YEAR);
+      }
       final InstantEdtfDate instantEdtfDate =
           new InstantEdtfDateBuilder(year).withDateQualification(getQualification(inputValue))
-                                          .withMoreThanFourDigitsYear()
                                           .withAllowDayMonthSwap(allowDayMonthSwap).build();
       dateNormalizationResult = new DateNormalizationResult(DateNormalizationExtractorMatchId.LONG_NEGATIVE_YEAR, inputValue,
           instantEdtfDate);

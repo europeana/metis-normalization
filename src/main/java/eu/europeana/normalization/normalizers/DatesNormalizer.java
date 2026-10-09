@@ -415,10 +415,9 @@ public class DatesNormalizer implements RecordNormalizeAction {
     Integer endCentury = Optional.ofNullable(lastDay)
                                  .map(InstantEdtfDate::getCentury).orElse(null);
 
-    // TODO: 25/07/2022 What if both are null, won't the 'for' loop below fail? Is there always at least one century?
-    //At this point, everything should be valid so that is not possible.
-    //For a sanity check perhaps we can check for that case and throw an exception if that happens.
-    //Or the date objects, as before, are by their instantiation validated.
+    if (startCentury == null && endCentury == null) {
+      throw new IllegalStateException("Normalized date has no calculated boundaries: " + edtfDate);
+    }
     if (startCentury == null) {
       startCentury = endCentury;
     } else if (endCentury == null) {
