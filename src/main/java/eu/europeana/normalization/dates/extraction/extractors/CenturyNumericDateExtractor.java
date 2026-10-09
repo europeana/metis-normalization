@@ -14,6 +14,8 @@ import java.time.Clock;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * Extractor that matches centuries expressed using decimal numerals.
@@ -34,6 +36,8 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
 
   private final Clock clock;
 
+  @Getter
+  @AllArgsConstructor
   private enum CenturyNumericDatePattern {
     PATTERN_YYYY(compile(OPTIONAL_QUESTION_MARK_REGEX + YEAR_PREFIX_ENDING_DOTS_REGEX + OPTIONAL_QUESTION_MARK_REGEX,
         CASE_INSENSITIVE), DateNormalizationExtractorMatchId.CENTURY_NUMERIC),
@@ -42,19 +46,6 @@ public class CenturyNumericDateExtractor extends AbstractDateExtractor {
 
     private final Pattern pattern;
     private final DateNormalizationExtractorMatchId dateNormalizationExtractorMatchId;
-
-    CenturyNumericDatePattern(Pattern pattern, DateNormalizationExtractorMatchId dateNormalizationExtractorMatchId) {
-      this.pattern = pattern;
-      this.dateNormalizationExtractorMatchId = dateNormalizationExtractorMatchId;
-    }
-
-    public Pattern getPattern() {
-      return pattern;
-    }
-
-    public DateNormalizationExtractorMatchId getDateNormalizationExtractorMatchId() {
-      return dateNormalizationExtractorMatchId;
-    }
   }
 
   /**

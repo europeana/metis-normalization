@@ -1,12 +1,14 @@
 package eu.europeana.normalization.dates.edtf;
 
 import java.util.Set;
+import lombok.Getter;
 
 /**
  * An abstract class that contains the template that an EDTF date with compliance level 1 should implement.
  * <p>See more in the specification of <a href="https://www.loc.gov/standards/datetime/">EDTF</a></p>
  * <p>The date can contain a label, but can also be null</p>
  */
+@Getter
 public abstract class AbstractEdtfDate {
 
   private final String label;
@@ -25,10 +27,6 @@ public abstract class AbstractEdtfDate {
    * @param dateQualification the date qualification
    */
   public abstract void addQualification(DateQualification dateQualification);
-
-  public String getLabel() {
-    return label;
-  }
 
   public abstract Set<DateQualification> getDateQualifications();
 

@@ -2,7 +2,6 @@ package eu.europeana.normalization.dates.edtf;
 
 import eu.europeana.normalization.dates.YearPrecision;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
-import java.lang.invoke.MethodHandles;
 import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -14,8 +13,8 @@ import java.time.temporal.TemporalAccessor;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Builder class for {@link InstantEdtfDate}.
@@ -32,9 +31,10 @@ import org.slf4j.LoggerFactory;
  *   This object during build will overwrite the date parts, if any <@code>.with</@code> methods were called, from the {@link TemporalAccessor}</li>
  * </ul>
  */
+@Slf4j
+@Getter
 public class InstantEdtfDateBuilder {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   public static final int THRESHOLD_4_DIGITS_YEAR = 9999;
   public static final char OVER_4_DIGITS_YEAR_PREFIX = 'Y';
   private Year yearObj;
@@ -121,7 +121,7 @@ public class InstantEdtfDateBuilder {
       validateStrict();
       instantEdtfDate = new InstantEdtfDate(this);
     } catch (DateTimeException | DateExtractionException e) {
-      LOGGER.debug("Date build failed.", e);
+      log.debug("Date build failed.", e);
     }
     return instantEdtfDate;
   }
@@ -248,22 +248,6 @@ public class InstantEdtfDateBuilder {
   public InstantEdtfDateBuilder withAllowDayMonthSwap(boolean allowDayMonthSwap) {
     this.allowDayMonthSwap = allowDayMonthSwap;
     return this;
-  }
-
-  public Year getYearObj() {
-    return yearObj;
-  }
-
-  public Month getMonthObj() {
-    return monthObj;
-  }
-
-  public LocalDate getYearMonthDayObj() {
-    return yearMonthDayObj;
-  }
-
-  public YearPrecision getYearPrecision() {
-    return yearPrecision;
   }
 
   public Set<DateQualification> getDateQualifications() {

@@ -10,7 +10,6 @@ import static java.util.Optional.ofNullable;
 
 import eu.europeana.normalization.dates.YearPrecision;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
-import java.lang.invoke.MethodHandles;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.Month;
@@ -21,8 +20,8 @@ import java.time.temporal.TemporalAccessor;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Represents a date used by EDM normalization, including partial dates and century or decade precision.
@@ -45,15 +44,15 @@ import org.slf4j.LoggerFactory;
  * base year and returns 19 for all three examples above.</p>
  * <p>The uncertain and approximate qualifiers, '?' and '~', are combined into '%' when applied together.</p>
  */
+@Slf4j
+@Getter
 public final class InstantEdtfDate extends AbstractEdtfDate implements Comparable<InstantEdtfDate> {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private Year year;
   private Month month;
   private LocalDate yearMonthDay;
-  private YearPrecision yearPrecision;
   private Set<DateQualification> dateQualifications = EnumSet.noneOf(DateQualification.class);
+  private YearPrecision yearPrecision;
   private DateBoundaryType dateBoundaryType = DECLARED;
 
   /**
@@ -118,7 +117,7 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
         }
       }
     } catch (DateExtractionException e) {
-      LOGGER.error("Creating first day of instant failed!", e);
+      log.error("Creating first day of instant failed!", e);
     }
 
     return firstDay;
@@ -173,7 +172,7 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
         }
       }
     } catch (DateExtractionException e) {
-      LOGGER.error("Creating last day of instant failed!", e);
+      log.error("Creating last day of instant failed!", e);
     }
     return lastDay;
   }
@@ -313,27 +312,9 @@ public final class InstantEdtfDate extends AbstractEdtfDate implements Comparabl
     return Objects.hash(yearPrecision, year, month, yearMonthDay, dateQualifications, dateBoundaryType);
   }
 
-  public Year getYear() {
-    return year;
-  }
-
-  public Month getMonth() {
-    return month;
-  }
-
-  public LocalDate getYearMonthDay() {
-    return yearMonthDay;
-  }
-
-  public YearPrecision getYearPrecision() {
-    return yearPrecision;
-  }
-
+  @Override
   public Set<DateQualification> getDateQualifications() {
     return EnumSet.copyOf(dateQualifications);
   }
 
-  public DateBoundaryType getDateBoundaryType() {
-    return dateBoundaryType;
-  }
 }

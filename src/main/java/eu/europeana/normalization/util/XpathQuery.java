@@ -54,7 +54,7 @@ public final class XpathQuery {
 
     // Compute the namespace map - compute unique prefix for all namespaces.
     final int[] counter = {0};
-    this.namespaceByPrefixMap = Arrays.stream(elements).map(Element::getNamespace)
+    this.namespaceByPrefixMap = Arrays.stream(elements).map(Element::namespace)
         .map(Namespace::getUri).distinct().collect(Collectors.toMap(namespace -> {
           counter[0]++;
           return "ns" + counter[0];
@@ -66,12 +66,12 @@ public final class XpathQuery {
 
     // Compute the expression
     final Object[] parameters = this.elements.stream().map(element -> elementToString(element,
-        prefixByNamespaceMap.get(element.getNamespace().getUri()))).toArray(Object[]::new);
+        prefixByNamespaceMap.get(element.namespace().getUri()))).toArray(Object[]::new);
     this.expression = String.format(expressionFormat, parameters).trim();
   }
 
   private static String elementToString(Element element, String prefix) {
-    return XmlUtil.addPrefixToNodeName(element.getElementName(), prefix);
+    return XmlUtil.addPrefixToNodeName(element.elementName(), prefix);
   }
 
   /**

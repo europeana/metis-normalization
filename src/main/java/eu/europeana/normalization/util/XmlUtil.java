@@ -7,10 +7,8 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.lang.invoke.MethodHandles;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -22,8 +20,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPathExpressionException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -32,12 +29,10 @@ import org.xml.sax.SAXException;
 
 /**
  * Utility methods for working with XML DOMs (org.w3c.dom)
- *
- * @author Nuno Freire (nfreire@gmail.com)
  */
+@Slf4j
 public final class XmlUtil {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final DocumentBuilderFactory FACTORY = DocumentBuilderFactory.newInstance();
 
   static {
@@ -46,7 +41,7 @@ public final class XmlUtil {
       FACTORY.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
       FACTORY.setNamespaceAware(true);
     } catch (ParserConfigurationException e) {
-      LOGGER.error("Could not initialize static block XmlUtil", e);
+      log.error("Could not initialize static block XmlUtil", e);
     }
   }
 
@@ -62,8 +57,8 @@ public final class XmlUtil {
    * @return the prefixed element name
    */
   public static String getPrefixedElementName(Namespace.Element elementType, String knownPrefix) {
-    return XmlUtil.addPrefixToNodeName(elementType.getElementName(),
-        Optional.ofNullable(knownPrefix).orElseGet(elementType.getNamespace()::getSuggestedPrefix));
+    return XmlUtil.addPrefixToNodeName(elementType.elementName(),
+        Optional.ofNullable(knownPrefix).orElseGet(elementType.namespace()::getSuggestedPrefix));
   }
 
   /**
@@ -93,9 +88,9 @@ public final class XmlUtil {
       List<Namespace.Element> previousElementTypes) {
 
     // Create the new element.
-    final String knownPrefix = parent.lookupPrefix(elementType.getNamespace().getUri());
+    final String knownPrefix = parent.lookupPrefix(elementType.namespace().getUri());
     final Element newElement = parent.getOwnerDocument().createElementNS(
-        elementType.getNamespace().getUri(), getPrefixedElementName(elementType, knownPrefix));
+        elementType.namespace().getUri(), getPrefixedElementName(elementType, knownPrefix));
 
     // Find last instance of a previous element type.
     Element previousElement = null;
@@ -111,9 +106,9 @@ public final class XmlUtil {
 
         // Check against the types: if we find one that matches, we found our previous element.
         final boolean matchesPreviousElementType = previousElementTypes.stream()
-            .filter(type -> type.getElementName().equals(childElement.getLocalName()))
-            .anyMatch(type -> type.getNamespace().getUri()
-                .equals(childElement.lookupNamespaceURI(childElement.getPrefix())));
+            .filter(type -> type.elementName().equals(childElement.getLocalName()))
+            .anyMatch(type -> type.namespace().getUri()
+                                  .equals(childElement.lookupNamespaceURI(childElement.getPrefix())));
         if (matchesPreviousElementType) {
           previousElement = childElement;
           break;
@@ -167,8 +162,8 @@ public final class XmlUtil {
    */
   public static List<Element> getAsElementList(NodeList nodeList) {
     return IntStream.range(0, nodeList.getLength()).mapToObj(nodeList::item)
-        .filter(node -> (node instanceof Element)).map(node -> (Element) node)
-        .collect(Collectors.toList());
+        .filter(Element.class::isInstance).map(Element.class::cast)
+        .toList();
   }
 
   /**

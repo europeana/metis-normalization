@@ -5,10 +5,14 @@ import static java.lang.String.format;
 
 import java.util.EnumSet;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * An EDTF date that represents a period of time specified by a start and end date with various degrees of precision
  */
+@Setter
+@Getter
 public class IntervalEdtfDate extends AbstractEdtfDate {
 
   private InstantEdtfDate start;
@@ -55,22 +59,6 @@ public class IntervalEdtfDate extends AbstractEdtfDate {
   @Override
   public InstantEdtfDate getLastDay() {
     return end.getLastDay();
-  }
-
-  public InstantEdtfDate getStart() {
-    return start;
-  }
-
-  public void setStart(InstantEdtfDate start) {
-    this.start = start;
-  }
-
-  public InstantEdtfDate getEnd() {
-    return end;
-  }
-
-  public void setEnd(InstantEdtfDate end) {
-    this.end = end;
   }
 
   @Override

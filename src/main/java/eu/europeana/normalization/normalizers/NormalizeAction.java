@@ -4,8 +4,6 @@ package eu.europeana.normalization.normalizers;
  * Instances of this class perform a single normalization action within the overall normalization
  * process. All instances must be able to produce an instance of {@link RecordNormalizeAction} that
  * reflects the normalization in the context of an EDM DOM tree.
- * 
- * @author jochen
  */
 public interface NormalizeAction {
 

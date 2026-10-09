@@ -4,6 +4,7 @@ import static eu.europeana.normalization.dates.DateNormalizationResultStatus.MAT
 
 import eu.europeana.normalization.dates.edtf.AbstractEdtfDate;
 import eu.europeana.normalization.dates.sanitize.SanitizeOperation;
+import lombok.Getter;
 
 /**
  * Contains the result of a date normalisation.
@@ -12,6 +13,7 @@ import eu.europeana.normalization.dates.sanitize.SanitizeOperation;
  * normalised).
  * </p>
  */
+@Getter
 public class DateNormalizationResult {
 
   private DateNormalizationResultStatus dateNormalizationResultStatus = MATCHED;
@@ -51,10 +53,6 @@ public class DateNormalizationResult {
     this.dateNormalizationResultStatus = dateNormalizationResultStatus;
   }
 
-  public DateNormalizationResultStatus getDateNormalizationResultStatus() {
-    return dateNormalizationResultStatus;
-  }
-
   /**
    * Get an instance of a date normalization result for no matches.
    *
@@ -63,21 +61,5 @@ public class DateNormalizationResult {
    */
   public static DateNormalizationResult getNoMatchResult(String originalInput) {
     return new DateNormalizationResult(DateNormalizationResultStatus.NO_MATCH, originalInput);
-  }
-
-  public DateNormalizationExtractorMatchId getDateNormalizationExtractorMatchId() {
-    return dateNormalizationExtractorMatchId;
-  }
-
-  public SanitizeOperation getSanitizeOperation() {
-    return sanitizeOperation;
-  }
-
-  public String getOriginalInput() {
-    return originalInput;
-  }
-
-  public AbstractEdtfDate getEdtfDate() {
-    return edtfDate;
   }
 }

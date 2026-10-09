@@ -1,10 +1,9 @@
 package eu.europeana.normalization.dates.edtf;
 
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
-import java.lang.invoke.MethodHandles;
 import java.time.DateTimeException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Builder class for {@link IntervalEdtfDate}.
@@ -14,9 +13,10 @@ import org.slf4j.LoggerFactory;
  * start and end values if the original values were invalid.
  * </p>
  */
+@Slf4j
+@Getter
 public class IntervalEdtfDateBuilder {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private InstantEdtfDate start;
   private InstantEdtfDate end;
   private String label;
@@ -114,21 +114,9 @@ public class IntervalEdtfDateBuilder {
         intervalEdtfDate = new IntervalEdtfDate(this);
       }
     } catch (DateTimeException e) {
-      LOGGER.debug("Date build failed.", e);
+      log.debug("Date build failed.", e);
     }
 
     return intervalEdtfDate;
-  }
-
-  public InstantEdtfDate getStart() {
-    return start;
-  }
-
-  public InstantEdtfDate getEnd() {
-    return end;
-  }
-
-  public String getLabel() {
-    return label;
   }
 }

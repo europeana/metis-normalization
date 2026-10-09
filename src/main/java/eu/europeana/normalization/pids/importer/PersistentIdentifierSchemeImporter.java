@@ -1,20 +1,18 @@
 package eu.europeana.normalization.pids.importer;
 
-import eu.europeana.normalization.pids.model.PersistentIdentifierSchemes;
 import eu.europeana.normalization.pids.PidScheme;
 import eu.europeana.normalization.pids.importer.exception.BadContentException;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
 import eu.europeana.normalization.pids.importer.model.Location;
+import eu.europeana.normalization.pids.model.PersistentIdentifierSchemes;
 import eu.europeana.normalization.pids.model.PidSchemeReferencesConfiguration;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.dataformat.xml.XmlMapper;
 import tools.jackson.dataformat.yaml.YAMLFactory;
@@ -22,13 +20,12 @@ import tools.jackson.dataformat.yaml.YAMLFactory;
 /**
  * The type Persistent identifier scheme importer.
  */
+@Slf4j
 public record PersistentIdentifierSchemeImporter(Location directoryLocation) implements PersistentIdentifierSchemeImportable {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   @Override
   public List<PidScheme> importPidSchemes() throws PidSchemeImportException {
-    // Obtain the directory entries.
+    // Get the directory entries.
     final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
     final PidSchemeReferencesConfiguration referencesConfiguration;
 
@@ -54,12 +51,12 @@ public record PersistentIdentifierSchemeImporter(Location directoryLocation) imp
       try {
         PidScheme pidScheme = loadPersistentIdentifierScheme(pidSchemeLocation);
         if (pidScheme == null) {
-          LOGGER.warn("Skipping null PID scheme from importer");
+          log.warn("Skipping null PID scheme from importer");
           continue;
         }
         importedSchemes.add(pidScheme);
       } catch (PidSchemeImportException exception) {
-        LOGGER.warn("Failed to load individual PID scheme skipping it, continuing with others", exception);
+        log.warn("Failed to load individual PID scheme skipping it, continuing with others", exception);
       }
     }
 

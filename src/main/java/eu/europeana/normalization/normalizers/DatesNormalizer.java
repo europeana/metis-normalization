@@ -36,7 +36,6 @@ import eu.europeana.normalization.util.Namespace;
 import eu.europeana.normalization.util.NormalizationException;
 import eu.europeana.normalization.util.XmlUtil;
 import eu.europeana.normalization.util.XpathQuery;
-import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,11 +44,10 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.xml.xpath.XPathExpressionException;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
@@ -65,9 +63,9 @@ import org.w3c.dom.Element;
  *   </ul>
  * </p>
  */
+@Slf4j
 public class DatesNormalizer implements RecordNormalizeAction {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final int MAX_VOCABULARY_CENTURY = 21;
 
   private static final Namespace.Element EDM_PROVIDED_CHO = Namespace.EDM.getElement("ProvidedCHO");
@@ -158,18 +156,18 @@ public class DatesNormalizer implements RecordNormalizeAction {
         input -> normalizeInputSanitized(extractorsInOrderForDateProperties, input,
             dateFieldSanitizer::sanitize1stTimeDateProperty,
             SanitizeOperation::isApproximateSanitizeOperationForDateProperty,
-            (dateExtractors, sanitizedDate) -> normalizeInput(dateExtractors, sanitizedDate.getSanitizedDateString())),
+            (dateExtractors, sanitizedDate) -> normalizeInput(dateExtractors, sanitizedDate.sanitizedDateString())),
         input -> normalizeInputSanitized(extractorsInOrderForDateProperties, input,
             dateFieldSanitizer::sanitize2ndTimeDateProperty,
             SanitizeOperation::isApproximateSanitizeOperationForDateProperty,
-            (dateExtractors, sanitizedDate) -> normalizeInput(dateExtractors, sanitizedDate.getSanitizedDateString())));
+            (dateExtractors, sanitizedDate) -> normalizeInput(dateExtractors, sanitizedDate.sanitizedDateString())));
 
     normalizationOperationsInOrderGenericProperty = List.of(
         input -> normalizeInputGeneric(extractorsInOrderForGenericProperties, input),
         input -> normalizeInputSanitized(extractorsInOrderForGenericProperties, input,
             dateFieldSanitizer::sanitizeGenericProperty,
             SanitizeOperation::isApproximateSanitizeOperationForGenericProperty,
-            (dateExtractors, sanitizedDate) -> normalizeInputGeneric(dateExtractors, sanitizedDate.getSanitizedDateString())));
+            (dateExtractors, sanitizedDate) -> normalizeInputGeneric(dateExtractors, sanitizedDate.sanitizedDateString())));
   }
 
   private static Pair<Namespace.Element, XpathQuery> getProxySubtagQuery(Namespace.Element subtag) {
@@ -221,10 +219,10 @@ public class DatesNormalizer implements RecordNormalizeAction {
 
     // Apply the normalization. If nothing can be done, we return.
     final SourceLiteral sourceLiteral = new SourceLiteral(XmlUtil.getElementText(element),
-        element.getAttributeNS(XML_LANG.getNamespace().getUri(), XML_LANG.getElementName()));
+        element.getAttributeNS(XML_LANG.namespace().getUri(), XML_LANG.elementName()));
     final DateNormalizationResult dateNormalizationResult = normalizationFunction.apply(sourceLiteral.text());
     if (dateNormalizationResult.getDateNormalizationResultStatus() == NO_MATCH) {
-      LOGGER.debug("Normalization did not find a match");
+      log.debug("Normalization did not find a match");
       return;
     }
 
@@ -241,9 +239,9 @@ public class DatesNormalizer implements RecordNormalizeAction {
     // go at the beginning of the proxy in a choice, so the order doesn't matter.
     final Element reference = XmlUtil.createElement(elementType, europeanaProxy, List.of());
     final String fullResourceName = XmlUtil.getPrefixedElementName(RDF_RESOURCE,
-        reference.lookupPrefix(RDF_RESOURCE.getNamespace().getUri()));
+        reference.lookupPrefix(RDF_RESOURCE.namespace().getUri()));
     final Attr dcTermsIsPartOfResource = document.createAttributeNS(
-        RDF_RESOURCE.getNamespace().getUri(), fullResourceName);
+        RDF_RESOURCE.namespace().getUri(), fullResourceName);
     dcTermsIsPartOfResource.setValue(timespanId);
     reference.setAttributeNode(dcTermsIsPartOfResource);
 
@@ -308,14 +306,14 @@ public class DatesNormalizer implements RecordNormalizeAction {
       BiFunction<List<DateExtractor>, SanitizedDate, DateNormalizationResult> normalizeFunction) {
     final SanitizedDate sanitizedDate = sanitizeFunction.apply(input);
     DateNormalizationResult dateNormalizationResult = DateNormalizationResult.getNoMatchResult(input);
-    if (sanitizedDate != null && StringUtils.isNotEmpty(sanitizedDate.getSanitizedDateString())) {
+    if (sanitizedDate != null && StringUtils.isNotEmpty(sanitizedDate.sanitizedDateString())) {
       dateNormalizationResult = normalizeFunction.apply(dateExtractors, sanitizedDate);
       if (dateNormalizationResult.getDateNormalizationResultStatus() == MATCHED) {
-        if (checkIfApproximateCleanOperationId.test(sanitizedDate.getSanitizeOperation())) {
+        if (checkIfApproximateCleanOperationId.test(sanitizedDate.sanitizeOperation())) {
           dateNormalizationResult.getEdtfDate().addQualification(DateQualification.APPROXIMATE);
         }
         //Re-create result containing sanitization operation.
-        dateNormalizationResult = new DateNormalizationResult(dateNormalizationResult, sanitizedDate.getSanitizeOperation());
+        dateNormalizationResult = new DateNormalizationResult(dateNormalizationResult, sanitizedDate.sanitizeOperation());
       }
     }
     return dateNormalizationResult;
@@ -358,10 +356,10 @@ public class DatesNormalizer implements RecordNormalizeAction {
 
     //Check if element with the same id already exists, if so we need to remove it first.
     List<Element> elements = XmlUtil.getAsElementList(document.getDocumentElement()
-                                                              .getElementsByTagNameNS(EDM_TIMESPAN.getNamespace().getUri(),
-                                                                  EDM_TIMESPAN.getElementName()));
+                                                              .getElementsByTagNameNS(EDM_TIMESPAN.namespace().getUri(),
+                                                                  EDM_TIMESPAN.elementName()));
     for (Element element : elements) {
-      String aboutValue = element.getAttributeNS(RDF_ABOUT.getNamespace().getUri(), RDF_ABOUT.getElementName());
+      String aboutValue = element.getAttributeNS(RDF_ABOUT.namespace().getUri(), RDF_ABOUT.elementName());
       if (timespanId.equals(aboutValue)) {
         document.getDocumentElement().removeChild(element);
       }
@@ -374,8 +372,8 @@ public class DatesNormalizer implements RecordNormalizeAction {
     final Element timeSpan = XmlUtil.createElement(EDM_TIMESPAN, document.getDocumentElement(),
         List.of(EDM_PROVIDED_CHO, EDM_AGENT, EDM_PLACE, EDM_WEB_RESOURCE, EDM_TIMESPAN));
     final String fullRdfAboutName = XmlUtil.getPrefixedElementName(RDF_ABOUT,
-        document.getDocumentElement().lookupPrefix(RDF_ABOUT.getNamespace().getUri()));
-    final Attr rdfAbout = document.createAttributeNS(RDF_ABOUT.getNamespace().getUri(), fullRdfAboutName);
+        document.getDocumentElement().lookupPrefix(RDF_ABOUT.namespace().getUri()));
+    final Attr rdfAbout = document.createAttributeNS(RDF_ABOUT.namespace().getUri(), fullRdfAboutName);
     rdfAbout.setValue(timespanId);
     timeSpan.setAttributeNode(rdfAbout);
 
@@ -415,6 +413,7 @@ public class DatesNormalizer implements RecordNormalizeAction {
     Integer endCentury = Optional.ofNullable(lastDay)
                                  .map(InstantEdtfDate::getCentury).orElse(null);
 
+    // Sanity check: It should normally not happen that both start and end century are null.
     if (startCentury == null && endCentury == null) {
       throw new IllegalStateException("Normalized date has no calculated boundaries: " + edtfDate);
     }
@@ -426,10 +425,10 @@ public class DatesNormalizer implements RecordNormalizeAction {
 
     // Create century links only within the supported vocabulary range (1-21).
     final String fullResourceName = XmlUtil.getPrefixedElementName(RDF_RESOURCE,
-        timeSpan.lookupPrefix(RDF_RESOURCE.getNamespace().getUri()));
+        timeSpan.lookupPrefix(RDF_RESOURCE.namespace().getUri()));
     for (int century = Math.max(1, startCentury); century <= Math.min(MAX_VOCABULARY_CENTURY, endCentury); century++) {
       final Element dctermsIsPartOf = XmlUtil.createElement(DC_TERMS_IS_PART_OF, timeSpan, null);
-      final Attr dctermsIsPartOfResource = document.createAttributeNS(RDF_RESOURCE.getNamespace().getUri(), fullResourceName);
+      final Attr dctermsIsPartOfResource = document.createAttributeNS(RDF_RESOURCE.namespace().getUri(), fullResourceName);
       dctermsIsPartOfResource.setValue("http://data.europeana.eu/timespan/" + century);
       dctermsIsPartOf.setAttributeNode(dctermsIsPartOfResource);
     }
@@ -447,8 +446,8 @@ public class DatesNormalizer implements RecordNormalizeAction {
     // Create and add skosNotation
     final Element skosNotation = XmlUtil.createElement(SKOS_NOTATION, timeSpan, null);
     final String fullNotationTypeName = XmlUtil.getPrefixedElementName(RDF_DATATYPE,
-        timeSpan.lookupPrefix(RDF_DATATYPE.getNamespace().getUri()));
-    final Attr skosNotationType = document.createAttributeNS(RDF_DATATYPE.getNamespace().getUri(), fullNotationTypeName);
+        timeSpan.lookupPrefix(RDF_DATATYPE.namespace().getUri()));
+    final Attr skosNotationType = document.createAttributeNS(RDF_DATATYPE.namespace().getUri(), fullNotationTypeName);
     skosNotationType.setValue("http://id.loc.gov/datatypes/edtf/EDTF-level1");
     skosNotation.setAttributeNode(skosNotationType);
     skosNotation.appendChild(document.createTextNode(edtfDate.toString()));
@@ -463,9 +462,9 @@ public class DatesNormalizer implements RecordNormalizeAction {
     final String language = StringUtils.defaultString(languageTag);
     for (Namespace.Element labelType : SKOS_LABELS) {
       final List<Element> labels = XmlUtil.getAsElementList(timespanEntity.getElementsByTagNameNS(
-          labelType.getNamespace().getUri(), labelType.getElementName()));
+          labelType.namespace().getUri(), labelType.elementName()));
       for (Element label : labels) {
-        final String labelLanguage = label.getAttributeNS(XML_LANG.getNamespace().getUri(), XML_LANG.getElementName());
+        final String labelLanguage = label.getAttributeNS(XML_LANG.namespace().getUri(), XML_LANG.elementName());
         final boolean languageMatches = language.equals(labelLanguage)
             || (labelType == SKOS_PREF_LABEL && "zxx".equals(labelLanguage) && language.isEmpty());
         if (languageMatches && originalValue.equals(XmlUtil.getElementText(label))) {
@@ -482,8 +481,8 @@ public class DatesNormalizer implements RecordNormalizeAction {
   private static void setLabelLanguage(Element label, String language) {
     if (StringUtils.isNotEmpty(language)) {
       final String fullLangName = XmlUtil.getPrefixedElementName(XML_LANG,
-          label.lookupPrefix(XML_LANG.getNamespace().getUri()));
-      label.setAttributeNS(XML_LANG.getNamespace().getUri(), fullLangName, language);
+          label.lookupPrefix(XML_LANG.namespace().getUri()));
+      label.setAttributeNS(XML_LANG.namespace().getUri(), fullLangName, language);
     }
   }
 

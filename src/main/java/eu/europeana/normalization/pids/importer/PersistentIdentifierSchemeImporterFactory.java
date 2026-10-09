@@ -46,18 +46,7 @@ public class PersistentIdentifierSchemeImporterFactory {
     return new PersistentIdentifierSchemeImporter(new PathLocation(baseDirectory, directoryLocation));
   }
 
-  private static final class UrlLocation implements Location {
-
-    private final URL url;
-
-    /**
-     * Instantiates a new Url location.
-     *
-     * @param url the url
-     */
-    UrlLocation(URL url) {
-      this.url = url;
-    }
+  private record UrlLocation(URL url) implements Location {
 
     @Override
     public InputStream read() throws IOException {

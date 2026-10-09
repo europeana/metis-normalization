@@ -3,7 +3,6 @@ package eu.europeana.normalization.dates.edtf;
 import static java.lang.String.format;
 
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
-import java.lang.invoke.MethodHandles;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.time.Year;
@@ -14,15 +13,14 @@ import java.time.temporal.TemporalAccessor;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Iso8601 parser functionality.
  */
+@Slf4j
 public class Iso8601Parser {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   public static final int ISO_8601_MINIMUM_YEAR_DIGITS = 4;
 
   private static final Map<DateTimeFormatter, BiFunction<CharSequence, DateTimeFormatter, TemporalAccessor>> DATE_TIME_FORMATTERS =
@@ -72,7 +70,7 @@ public class Iso8601Parser {
       try {
         return entry.getValue().apply(input, entry.getKey());
       } catch (DateTimeParseException e) {
-        LOGGER.debug("Parsing date failed", e);
+        log.debug("Parsing date failed", e);
       }
       return null;
     }).filter(Objects::nonNull).findFirst().orElse(null);
@@ -85,15 +83,14 @@ public class Iso8601Parser {
 
   protected String temporalAccessorToString(TemporalAccessor temporalAccessor) {
     final String resultDateString;
-    if (temporalAccessor instanceof LocalDate) {
-      resultDateString = LocalDate.from(temporalAccessor).toString();
-    } else if (temporalAccessor instanceof YearMonth) {
-      resultDateString = YearMonth.from(temporalAccessor).toString();
-    } else if (temporalAccessor instanceof Year) {
-      final DecimalFormat decimalFormat = new DecimalFormat("0000");
-      resultDateString = decimalFormat.format(Year.from(temporalAccessor).getValue());
-    } else {
-      resultDateString = null;
+    switch (temporalAccessor) {
+      case LocalDate localDate -> resultDateString = localDate.toString();
+      case YearMonth yearMonth -> resultDateString = YearMonth.from(yearMonth).toString();
+      case Year year -> {
+        final DecimalFormat decimalFormat = new DecimalFormat("0000");
+        resultDateString = decimalFormat.format(Year.from(year).getValue());
+      }
+      case null, default -> resultDateString = null;
     }
     return resultDateString;
   }
