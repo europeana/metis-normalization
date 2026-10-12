@@ -4,8 +4,9 @@ import eu.europeana.normalization.normalizers.ChainedNormalizer;
 import eu.europeana.normalization.normalizers.RecordNormalizeAction;
 import eu.europeana.normalization.settings.NormalizerSettings;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.function.Failable;
 
 /**
  * This class creates instances of {@link Normalizer}. The default steps for a normalization are:
@@ -20,7 +21,7 @@ import java.util.List;
  */
 public class NormalizerFactory {
 
-  private static final NormalizerStep[] DEFAULT_NORMALIZER_STEPS = {
+  private static final List<NormalizerStep> DEFAULT_NORMALIZER_STEPS = List.of(
 
       // First: clean space characters, markup tags and IRI violations, thus normalizing text.
       NormalizerStep.CLEAN_SPACE_CHARACTERS,
@@ -37,7 +38,7 @@ public class NormalizerFactory {
       // Last: normalize dates and PIDs (which may be affected by the operations above).
       NormalizerStep.DATES_NORMALIZER,
       NormalizerStep.NORMALIZE_PIDS
-  };
+  );
   private final NormalizerSettings settings;
 
 
@@ -50,7 +51,7 @@ public class NormalizerFactory {
 
   /**
    * Constructor.
-   * 
+   *
    * @param settings The settings to be applied to this normalization.
    */
   public NormalizerFactory(NormalizerSettings settings) {
@@ -59,7 +60,7 @@ public class NormalizerFactory {
 
   /**
    * This method creates a normalizer with the default steps and order.
-   * 
+   *
    * @return A normalizer.
    * @throws NormalizationConfigurationException In case the normalizer could not be set up.
    */
@@ -69,24 +70,23 @@ public class NormalizerFactory {
 
   /**
    * This method creates a normalizer.
-   * 
+   *
    * @param normalizerSteps The steps to be performed and the order in which to perform them.
    * @return A normalizer.
    * @throws NormalizationConfigurationException In case the normalizer could not be set up.
    */
-  public Normalizer getNormalizer(NormalizerStep... normalizerSteps)
+  public Normalizer getNormalizer(List<NormalizerStep> normalizerSteps)
       throws NormalizationConfigurationException {
 
     // Sanity checks
-    if (normalizerSteps == null || normalizerSteps.length == 0) {
+    if (normalizerSteps == null || normalizerSteps.isEmpty()) {
       throw new NormalizationConfigurationException("The list of steps cannot be empty.", null);
     }
 
     // Create actions for the steps.
-    final List<RecordNormalizeAction> actions = new ArrayList<>(normalizerSteps.length);
-    for (NormalizerStep step : normalizerSteps) {
-      actions.add(step.createAction(settings).getAsRecordNormalizer());
-    }
+    final List<RecordNormalizeAction> actions = Failable.stream(normalizerSteps)
+            .map(step -> step.createAction(settings).getAsRecordNormalizer())
+        .collect(Collectors.toList());
 
     // Create chain normalizer and use it to set up the normalizer.
     return new NormalizerImpl(new ChainedNormalizer(actions.toArray(new RecordNormalizeAction[0])));

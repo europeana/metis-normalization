@@ -9,11 +9,12 @@ import eu.europeana.normalization.util.NormalizationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.function.Failable;
 
 /**
  * This class is the implementation of the {@link Normalizer} interface.
@@ -25,7 +26,7 @@ class NormalizerImpl implements Normalizer {
 
   /**
    * Constructor.
-   * 
+   *
    * @param recordNormalizer The record normalizer that is executed by this normalizer.
    */
   NormalizerImpl(RecordNormalizeAction recordNormalizer) {
@@ -41,10 +42,8 @@ class NormalizerImpl implements Normalizer {
     }
 
     // Normalize all records.
-    final List<NormalizationResult> result = new ArrayList<>(edmRecords.size());
-    for (String record : edmRecords) {
-      result.add(normalize(record));
-    }
+    final List<NormalizationResult> result =
+        Failable.stream(edmRecords).map(this::normalize).collect(Collectors.toList());
     return new NormalizationBatchResult(result);
   }
 

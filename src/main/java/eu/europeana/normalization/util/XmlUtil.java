@@ -52,8 +52,8 @@ public final class XmlUtil {
    * Get an element name that contains the namespace prefix e.g. prefix:elementName.
    *
    * @param elementType the element type of which to compute the name.
-   * @param knownPrefix the prefix to use, if one is known for this element's namespace. If null,
-   *                    the suggested prefix for the element's namespace will be used.
+   * @param knownPrefix the prefix to use, if one is known for this element's namespace. If null, the suggested prefix for the
+   * element's namespace will be used.
    * @return the prefixed element name
    */
   public static String getPrefixedElementName(Namespace.Element elementType, String knownPrefix) {
@@ -69,18 +69,17 @@ public final class XmlUtil {
    * @return The name with the prefix.
    */
   public static String addPrefixToNodeName(String nodeName, String prefix) {
-    return prefix == null ? nodeName : String.format("%s:%s", prefix, nodeName);
+    return prefix == null ? nodeName : (prefix + ":" + nodeName);
   }
 
   /**
-   * Add the element to the parent. The new element will be added directly after the last occurrence
-   * of any element of any given previous element type. If no previous element types are passed
-   * (i.e. empty list), or if no element af any given previous element type was encountered, the
-   * element will be added at the beginning. If the list is null, this signals that the element
+   * Add the element to the parent. The new element will be added directly after the last occurrence of any element of any given
+   * previous element type. If no previous element types are passed (i.e. empty list), or if no element af any given previous
+   * element type was encountered, the element will be added at the beginning. If the list is null, this signals that the element
    * is to be added at the end.
-  *
-   * @param elementType          The element type to add.
-   * @param parent               The parent to add the element to.
+   *
+   * @param elementType The element type to add.
+   * @param parent The parent to add the element to.
    * @param previousElementTypes The element types to add this element after. Can be null.
    * @return The added (empty) element.
    */
@@ -92,43 +91,45 @@ public final class XmlUtil {
     final Element newElement = parent.getOwnerDocument().createElementNS(
         elementType.namespace().getUri(), getPrefixedElementName(elementType, knownPrefix));
 
-    // Find last instance of a previous element type.
-    Element previousElement = null;
-    if (previousElementTypes != null && !previousElementTypes.isEmpty()) {
-      for (int i = parent.getChildNodes().getLength() - 1; i >= 0; i--) {
-
-        // Get the child
-        final Node childNode = parent.getChildNodes().item(i);
-        if (!(childNode instanceof Element)) {
-          continue;
-        }
-        final Element childElement = (Element) childNode;
-
-        // Check against the types: if we find one that matches, we found our previous element.
-        final boolean matchesPreviousElementType = previousElementTypes.stream()
-            .filter(type -> type.elementName().equals(childElement.getLocalName()))
-            .anyMatch(type -> type.namespace().getUri()
-                                  .equals(childElement.lookupNamespaceURI(childElement.getPrefix())));
-        if (matchesPreviousElementType) {
-          previousElement = childElement;
-          break;
-        }
-      }
-    }
+    final Element lastPreviousElement = findLastPreviousElement(parent, previousElementTypes);
 
     // Position the element properly in the parent.
-    if (previousElement == null) {
+    if (lastPreviousElement == null) {
       if (previousElementTypes == null || parent.getChildNodes().getLength() == 0) {
         parent.appendChild(newElement);
       } else {
         parent.insertBefore(newElement, parent.getChildNodes().item(0));
       }
     } else {
-      parent.insertBefore(newElement, previousElement.getNextSibling());
+      parent.insertBefore(newElement, lastPreviousElement.getNextSibling());
     }
 
     // Done.
     return newElement;
+  }
+
+  private static Element findLastPreviousElement(Element parent,
+      List<Namespace.Element> previousElementTypes) {
+    if (previousElementTypes == null || previousElementTypes.isEmpty()) {
+      return null;
+    }
+
+    final NodeList childNodes = parent.getChildNodes();
+    for (int i = childNodes.getLength() - 1; i >= 0; i--) {
+      final Node childNode = childNodes.item(i);
+      if (childNode instanceof Element childElement && matchesAnyElementType(childElement, previousElementTypes)) {
+        return childElement;
+      }
+    }
+    return null;
+  }
+
+  private static boolean matchesAnyElementType(Element childElement,
+      List<Namespace.Element> elementTypes) {
+    return elementTypes.stream()
+                       .filter(type -> type.elementName().equals(childElement.getLocalName()))
+                       .anyMatch(type -> type.namespace().getUri()
+                                             .equals(childElement.lookupNamespaceURI(childElement.getPrefix())));
   }
 
   /**
@@ -153,27 +154,26 @@ public final class XmlUtil {
   }
 
   /**
-   * Convert the given instance of {@link NodeList} to an instance of {@link List} with {@link
-   * Element} objects. Entries in the original list that are not instances of {@link Element} will
-   * be ignored.
+   * Convert the given instance of {@link NodeList} to an instance of {@link List} with {@link Element} objects. Entries in the
+   * original list that are not instances of {@link Element} will be ignored.
    *
    * @param nodeList The list of nodes to convert.
    * @return The converted list.
    */
   public static List<Element> getAsElementList(NodeList nodeList) {
     return IntStream.range(0, nodeList.getLength()).mapToObj(nodeList::item)
-        .filter(Element.class::isInstance).map(Element.class::cast)
-        .toList();
+                    .filter(Element.class::isInstance).map(Element.class::cast)
+                    .toList();
   }
 
   /**
    * Executes the Xpath query to find the unique element.
    *
-   * @param query    The query to execute.
+   * @param query The query to execute.
    * @param document The document in which to query.
    * @return The unique element satisfying the query.
-   * @throws NormalizationException In case the query could not be executed, or there is not a
-   *                                (unique) element satisfying the query.
+   * @throws NormalizationException In case the query could not be executed, or there is not a (unique) element satisfying the
+   * query.
    */
   public static Element getUniqueElement(XpathQuery query, Document document)
       throws NormalizationException {
@@ -275,7 +275,7 @@ public final class XmlUtil {
    */
   public static byte[] writeDomToByteArray(Document dom) throws XmlException {
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    final Writer writer= new BufferedWriter(new OutputStreamWriter(outputStream));
+    final Writer writer = new BufferedWriter(new OutputStreamWriter(outputStream));
     writeDom(dom, writer);
     return outputStream.toByteArray();
   }
