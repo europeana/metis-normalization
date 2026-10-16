@@ -1,12 +1,16 @@
 package eu.europeana.normalization.normalizers;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 import org.apache.jena.iri.Violation;
 import org.junit.jupiter.api.Test;
-
-import java.util.*;
-import java.util.stream.StreamSupport;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 
 class CleanIRIViolationsNormalizerTest {
@@ -28,8 +32,8 @@ class CleanIRIViolationsNormalizerTest {
     assertTrue(StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(violations, Spliterator.SIZED), false)
         .anyMatch(violation -> violation.codeName().equals("WHITESPACE")));
-    assertEquals("http://example.com/query?q=random%20word", result.get(0).normalizedValue());
-    assertEquals(1, result.get(0).confidence());
+    assertEquals("http://example.com/query?q=random%20word", result.getFirst().normalizedValue());
+    assertEquals(1, result.getFirst().confidence());
   }
 
   @Test
@@ -40,8 +44,8 @@ class CleanIRIViolationsNormalizerTest {
     assertTrue(StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(violations, Spliterator.SIZED), false)
         .anyMatch(violation -> violation.codeName().equals("UNWISE_CHARACTER")));
-    assertEquals("http://example.com/query?q=random%3Cword", result.get(0).normalizedValue());
-    assertEquals(1, result.get(0).confidence());
+    assertEquals("http://example.com/query?q=random%3Cword", result.getFirst().normalizedValue());
+    assertEquals(1, result.getFirst().confidence());
   }
 
   @Test
@@ -59,8 +63,8 @@ class CleanIRIViolationsNormalizerTest {
     assertTrue(StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(violations, Spliterator.SIZED), false)
         .anyMatch(violation -> violation.codeName().equals("NOT_XML_SCHEMA_WHITESPACE")));
-    assertEquals("http://example.com/query?q=random%09word", result.get(0).normalizedValue());
-    assertEquals(1, result.get(0).confidence());
+    assertEquals("http://example.com/query?q=random%09word", result.getFirst().normalizedValue());
+    assertEquals(1, result.getFirst().confidence());
   }
 
   @Test
@@ -71,8 +75,8 @@ class CleanIRIViolationsNormalizerTest {
     assertTrue(StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(violations, Spliterator.SIZED), false)
         .anyMatch(violation -> violation.codeName().equals("DOUBLE_WHITESPACE")));
-    assertEquals("http://example.com/query?q=random%20%20word", result.get(0).normalizedValue());
-    assertEquals(1, result.get(0).confidence());
+    assertEquals("http://example.com/query?q=random%20%20word", result.getFirst().normalizedValue());
+    assertEquals(1, result.getFirst().confidence());
   }
 
   @Test
@@ -83,8 +87,8 @@ class CleanIRIViolationsNormalizerTest {
     assertTrue(StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(violations, Spliterator.SIZED), false)
         .anyMatch(violation -> violation.codeName().equals("CONTROL_CHARACTER")));
-    assertEquals("http://example.com/query?q=random%C2%85word", result.get(0).normalizedValue());
-    assertEquals(1, result.get(0).confidence());
+    assertEquals("http://example.com/query?q=random%C2%85word", result.getFirst().normalizedValue());
+    assertEquals(1, result.getFirst().confidence());
   }
 
   @Test
@@ -95,8 +99,7 @@ class CleanIRIViolationsNormalizerTest {
     assertTrue(StreamSupport
         .stream(Spliterators.spliteratorUnknownSize(violations, Spliterator.SIZED), false)
         .anyMatch(violation -> violation.codeName().equals("COMPATIBILITY_CHARACTER")));
-    assertEquals("http://example.com/query?q=random%E0%BB%9Cword",
-        result.get(0).normalizedValue());
-    assertEquals(1, result.get(0).confidence());
+    assertEquals("http://example.com/query?q=random%E0%BB%9Cword", result.getFirst().normalizedValue());
+    assertEquals(1, result.getFirst().confidence());
   }
 }

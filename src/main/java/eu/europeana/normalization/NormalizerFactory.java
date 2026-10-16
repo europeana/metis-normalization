@@ -5,7 +5,6 @@ import eu.europeana.normalization.normalizers.RecordNormalizeAction;
 import eu.europeana.normalization.settings.NormalizerSettings;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.function.Failable;
 
 /**
@@ -85,8 +84,8 @@ public class NormalizerFactory {
 
     // Create actions for the steps.
     final List<RecordNormalizeAction> actions = Failable.stream(normalizerSteps)
-            .map(step -> step.createAction(settings).getAsRecordNormalizer())
-        .collect(Collectors.toList());
+                                                        .map(step -> step.createAction(settings).getAsRecordNormalizer())
+                                                        .stream().toList();
 
     // Create chain normalizer and use it to set up the normalizer.
     return new NormalizerImpl(new ChainedNormalizer(actions.toArray(new RecordNormalizeAction[0])));

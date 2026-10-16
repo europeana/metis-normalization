@@ -5,14 +5,14 @@ import static eu.europeana.normalization.dates.edtf.InstantEdtfDateBuilder.THRES
 
 import java.time.Clock;
 import java.time.Year;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 /**
  * Validates numbered centuries before conversion to an EDTF year prefix.
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class CenturyDateValidator {
-
-  private CenturyDateValidator() {
-  }
 
   /**
    * Checks that a positive numbered century fits the supported year representation and has started.

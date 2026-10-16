@@ -52,7 +52,7 @@ public interface RangeDateExtractor<T extends DatesSeparator> {
       DateNormalizationResult endDateResult);
 
   /**
-   * Class wrapping a pair of start and end dates.
+   * Record wrapping a pair of start and end dates.
    */
   record DateNormalizationResultRangePair(DateNormalizationResult startDateNormalizationResult,
                                           DateNormalizationResult endDateNormalizationResult) {

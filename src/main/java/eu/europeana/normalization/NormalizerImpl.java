@@ -11,7 +11,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.function.Failable;
@@ -43,7 +42,7 @@ class NormalizerImpl implements Normalizer {
 
     // Normalize all records.
     final List<NormalizationResult> result =
-        Failable.stream(edmRecords).map(this::normalize).collect(Collectors.toList());
+        Failable.stream(edmRecords).map(this::normalize).stream().toList();
     return new NormalizationBatchResult(result);
   }
 
