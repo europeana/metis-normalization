@@ -69,6 +69,7 @@ class EdtfRangeDateExtractorTest implements DateExtractorTest {
   private static Stream<Arguments> letterPrefixedCalendarYearIntervalLevel1() {
     return Stream.of(
         of("Y-123456789/Y-123456788", "Y-123456789/Y-123456788"),
+        of("Y-10000/Y-9999", null),
         //Non prefixed
         of("-123456789/-123456788", null)
     );

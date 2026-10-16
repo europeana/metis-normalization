@@ -8,8 +8,6 @@ import eu.europeana.normalization.util.NormalizationException;
 
 /**
  * This interface allows access to this library's normalization functionality.
- * 
- * @author jochen
  */
 public interface Normalizer {
 

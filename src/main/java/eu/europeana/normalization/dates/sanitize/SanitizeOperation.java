@@ -7,13 +7,14 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 
 /**
  * Enum containing all sanitize operations.
  * <p>The patterns expect the original value to be sanitized from multiple space characters and leading and trailing spaces
- * removed. Some operation could have been combined, but they are structured intentionally separately so that they can be applied
- * separately in different order.</p>
+ * removed. Some operations could have been combined, but they are structured intentionally separately so that they can be applied
+ * separately in different orders.</p>
  * <p>
  * In detail each enum value contains:
  *   <ul>
@@ -24,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
  *   </ul>
  * </p>
  */
+@Getter
 public enum SanitizeOperation {
 
   STARTING_TEXT_UNTIL_FIRST_COLON(compile("^[^:]*:\\s?"),
@@ -63,7 +65,6 @@ public enum SanitizeOperation {
   private final Function<Matcher, String> replaceOperation;
   private final Predicate<String> isOperationSuccessful;
 
-
   SanitizeOperation(Pattern sanitizePattern, Predicate<Matcher> matchingCheck, Function<Matcher, String> replaceOperation,
       Predicate<String> isOperationSuccessful) {
     this.sanitizePattern = sanitizePattern;
@@ -72,24 +73,8 @@ public enum SanitizeOperation {
     this.isOperationSuccessful = isOperationSuccessful;
   }
 
-  public Pattern getSanitizePattern() {
-    return sanitizePattern;
-  }
-
-  public Predicate<Matcher> getMatchingCheck() {
-    return matchingCheck;
-  }
-
-  public Function<Matcher, String> getReplaceOperation() {
-    return replaceOperation;
-  }
-
-  public Predicate<String> getIsOperationSuccessful() {
-    return isOperationSuccessful;
-  }
-
   /**
-   * Check if provided sanitize operation is part of the approximate sanitize operations for date properties.
+   * Check if the provided sanitize operation is part of the approximate sanitize operations for date properties.
    *
    * @param sanitizeOperation the sanitize operation
    * @return true if it is, false otherwise
@@ -99,7 +84,7 @@ public enum SanitizeOperation {
   }
 
   /**
-   * Check if provided sanitize operation is part of the approximate sanitize operations for generic properties.
+   * Check if the provided sanitize operation is part of the approximate sanitize operations for generic properties.
    *
    * @param sanitizeOperation the sanitize operation
    * @return true if it is, false otherwise

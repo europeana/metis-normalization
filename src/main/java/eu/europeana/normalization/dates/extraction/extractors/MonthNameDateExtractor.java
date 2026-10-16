@@ -14,7 +14,6 @@ import eu.europeana.normalization.dates.edtf.InstantEdtfDateBuilder;
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
 import eu.europeana.normalization.dates.extraction.DatePartsIndices;
 import eu.europeana.normalization.dates.extraction.MonthMultilingual;
-import java.lang.invoke.MethodHandles;
 import java.time.Month;
 import java.util.Arrays;
 import java.util.Optional;
@@ -22,8 +21,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Extractor that matches dates which contain months represented by their name, in all the 24 european languages.
@@ -38,9 +37,9 @@ import org.slf4j.LoggerFactory;
  * </ul>
  * </p>
  */
+@Slf4j
 public class MonthNameDateExtractor extends AbstractDateExtractor {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private static final String DELIMITERS_REGEX = "[ .,]";
   private static final String YEAR_REGEX = "(\\d{4})";
   private static final String DAY_REGEX = "(\\d{1,2})";
@@ -51,6 +50,7 @@ public class MonthNameDateExtractor extends AbstractDateExtractor {
                        .map(Pattern::quote)
                        .collect(Collectors.joining("|", "(", ")"));
 
+  @Getter
   private enum MonthNameDatePattern {
     DAY_MONTH_YEAR_PATTERN(compilePattern(new String[]{DAY_REGEX, MONTH_JOINED_VALUES, YEAR_REGEX}), DMY_INDICES),
     MONTH_DAY_YEAR_PATTERN(compilePattern(new String[]{MONTH_JOINED_VALUES, DAY_REGEX, YEAR_REGEX}), MDY_INDICES),
@@ -64,17 +64,9 @@ public class MonthNameDateExtractor extends AbstractDateExtractor {
       this.datePartsIndices = datePartsIndices;
     }
 
-    public Pattern getPattern() {
-      return pattern;
+    private static Pattern compilePattern(String[] parts) {
+      return compile(String.join(DELIMITERS_REGEX, parts), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     }
-
-    public DatePartsIndices getDatePartsIndices() {
-      return datePartsIndices;
-    }
-  }
-
-  private static Pattern compilePattern(String[] parts) {
-    return compile(String.join(DELIMITERS_REGEX, parts), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
   }
 
   @Override
@@ -102,7 +94,7 @@ public class MonthNameDateExtractor extends AbstractDateExtractor {
             instantEdtfDate);
       }
     } catch (DateExtractionException e) {
-      LOGGER.debug("Could not match input value against pattern {}: {}",
+      log.debug("Could not match input value against pattern {}: {}",
           monthNameDatePattern.name(), inputValue, e);
     }
     return dateNormalizationResult;

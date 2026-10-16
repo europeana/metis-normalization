@@ -1,8 +1,13 @@
 package eu.europeana.normalization.dates;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 /**
  * Identifies the pattern that was matched, or if none of the patterns matched, or if a date matched a pattern but was invalid
  */
+@Getter
+@AllArgsConstructor
 public enum DateNormalizationExtractorMatchId {
   BC_AD("BC/AD date"),
   BRIEF_DATE_RANGE("brief year range"),
@@ -22,12 +27,4 @@ public enum DateNormalizationExtractorMatchId {
   NUMERIC_SPACES_VARIANT("numeric date (whitespace separators)");
 
   final String label;
-
-  DateNormalizationExtractorMatchId(String label) {
-    this.label = label;
-  }
-
-  public String getLabel() {
-    return label;
-  }
 }

@@ -1,14 +1,17 @@
 package eu.europeana.normalization.dates.edtf;
 
 import static eu.europeana.normalization.dates.extraction.DefaultDatesSeparator.SLASH_DELIMITER;
-import static java.lang.String.format;
 
 import java.util.EnumSet;
 import java.util.Set;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * An EDTF date that represents a period of time specified by a start and end date with various degrees of precision
  */
+@Setter
+@Getter
 public class IntervalEdtfDate extends AbstractEdtfDate {
 
   private InstantEdtfDate start;
@@ -57,24 +60,8 @@ public class IntervalEdtfDate extends AbstractEdtfDate {
     return end.getLastDay();
   }
 
-  public InstantEdtfDate getStart() {
-    return start;
-  }
-
-  public void setStart(InstantEdtfDate start) {
-    this.start = start;
-  }
-
-  public InstantEdtfDate getEnd() {
-    return end;
-  }
-
-  public void setEnd(InstantEdtfDate end) {
-    this.end = end;
-  }
-
   @Override
   public String toString() {
-    return format("%s%s%s", start.toString(), SLASH_DELIMITER.getStringRepresentation(), end.toString());
+    return start + SLASH_DELIMITER.getStringRepresentation() + end;
   }
 }

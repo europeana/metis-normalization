@@ -53,10 +53,10 @@ class AbstractEuropeanLanguageNormalizerTest {
     final List<NormalizedValueWithConfidence> result = normalizer.normalizeValue("input0");
     assertEquals(2, result.size());
     final Set<String> values = result.stream()
-        .map(NormalizedValueWithConfidence::getNormalizedValue).collect(Collectors.toSet());
+                                     .map(NormalizedValueWithConfidence::normalizedValue).collect(Collectors.toSet());
     assertTrue(values.contains(matchString1));
     assertTrue(values.contains(matchString2));
-    final Set<Float> confidences = result.stream().map(NormalizedValueWithConfidence::getConfidence)
+    final Set<Float> confidences = result.stream().map(NormalizedValueWithConfidence::confidence)
         .collect(Collectors.toSet());
     assertEquals(1, confidences.size());
     assertEquals(validConfidence, confidences.toArray()[0]);

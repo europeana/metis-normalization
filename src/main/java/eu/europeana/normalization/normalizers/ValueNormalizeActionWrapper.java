@@ -72,7 +72,7 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
         report.increment(normalization.getClass().getSimpleName(), ConfidenceLevel.CERTAIN);
       }
     } else if (copyTarget == null) {
-      boolean valueChanged = !normalizedValue.get(0).getNormalizedValue().equals(originalValue);
+      boolean valueChanged = !normalizedValue.get(0).normalizedValue().equals(originalValue);
       if (valueChanged) {
         updateAttribute(attribute, normalizedValue.get(0), report);
       }
@@ -94,7 +94,7 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
       }
     } else if (copyTarget == null) {
       boolean valueChanged = normalizedValues.size() > 1
-          || !normalizedValues.get(0).getNormalizedValue().equals(originalValue);
+          || !normalizedValues.get(0).normalizedValue().equals(originalValue);
       if (valueChanged) {
         updateElements(element, normalizedValues, report);
       }
@@ -106,7 +106,7 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
 
   private void copyValue(Element copyTarget, Set<String> valuesAlreadyPresent,
       NormalizedValueWithConfidence value, InternalNormalizationReport report) {
-    final boolean valueAdded = valuesAlreadyPresent.add(value.getNormalizedValue());
+    final boolean valueAdded = valuesAlreadyPresent.add(value.normalizedValue());
     if (valueAdded) {
       final Element newElement = XmlUtil.createElement(copySettings.getDestinationElement(),
           copyTarget, List.of(copySettings.getAfterElement()));
@@ -150,14 +150,14 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
   private void addTextToElement(Element element, NormalizedValueWithConfidence normalizedValue,
       InternalNormalizationReport report) {
     element.appendChild(
-        element.getOwnerDocument().createTextNode(normalizedValue.getNormalizedValue()));
+        element.getOwnerDocument().createTextNode(normalizedValue.normalizedValue()));
     report.increment(normalization.getClass().getSimpleName(),
         normalizedValue.getConfidenceClass());
   }
 
   private void updateAttribute(Attr attribute, NormalizedValueWithConfidence normalizedValue,
       InternalNormalizationReport report) {
-    attribute.setValue(normalizedValue.getNormalizedValue());
+    attribute.setValue(normalizedValue.normalizedValue());
     report.increment(normalization.getClass().getSimpleName(),
         normalizedValue.getConfidenceClass());
   }
@@ -175,8 +175,8 @@ public class ValueNormalizeActionWrapper implements RecordNormalizeAction {
     final Set<String> valuesAlreadyPresent = new HashSet<>();
     if (copyTarget != null) {
       final NodeList childNodes = copyTarget
-          .getElementsByTagNameNS(copySettings.getDestinationElement().getNamespace().getUri(),
-              copySettings.getDestinationElement().getElementName());
+          .getElementsByTagNameNS(copySettings.getDestinationElement().namespace().getUri(),
+              copySettings.getDestinationElement().elementName());
       XmlUtil.getAsElementList(childNodes).stream().map(XmlUtil::getElementText)
           .forEach(valuesAlreadyPresent::add);
     }

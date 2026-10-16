@@ -1,10 +1,9 @@
 package eu.europeana.normalization.dates.edtf;
 
 import eu.europeana.normalization.dates.extraction.DateExtractionException;
-import java.lang.invoke.MethodHandles;
 import java.time.DateTimeException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Builder class for {@link IntervalEdtfDate}.
@@ -14,16 +13,17 @@ import org.slf4j.LoggerFactory;
  * start and end values if the original values were invalid.
  * </p>
  */
+@Slf4j
+@Getter
 public class IntervalEdtfDateBuilder {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
   private InstantEdtfDate start;
   private InstantEdtfDate end;
   private String label;
   private boolean allowStartEndSwap = true;
 
   /**
-   * Constructor which initializes the builder with the start and end date boundaries.
+   * Constructor that initializes the builder with the start and end date boundaries.
    * <p>Boundaries should never be null</p>
    *
    * @param start the start date
@@ -37,7 +37,7 @@ public class IntervalEdtfDateBuilder {
   /**
    * Add label if any for the interval
    *
-   * @param label the interval specific label
+   * @param label the interval-specific label
    * @return the extended builder
    */
   public IntervalEdtfDateBuilder withLabel(String label) {
@@ -89,10 +89,10 @@ public class IntervalEdtfDateBuilder {
    * <ul>
    *   <li>that boundaries are not null</li>
    *   <li>If both dates are {@link DateBoundaryType#DECLARED} then the period has to be valid. The start must be before the end.</li>
-   *   <li>If any of the dates are not marked as {@link DateBoundaryType#DECLARED}, then no further validation is performed and the
-   *   period is considered valid(For example a period ../1989-11-01).</li>
+   *   <li>If any of the dates are not marked as {@link DateBoundaryType#DECLARED}, then no further validation is performed, and the
+   *   period is considered valid (For example, a period ../1989-11-01).</li>
    * </ul>
-   *  and that the period is valid(e.g start is not after end).</p>
+   *  and that the period is valid (e.g., start is not after the end).</p>
    */
   private IntervalEdtfDate buildInternal() {
     IntervalEdtfDate intervalEdtfDate = null;
@@ -114,21 +114,9 @@ public class IntervalEdtfDateBuilder {
         intervalEdtfDate = new IntervalEdtfDate(this);
       }
     } catch (DateTimeException e) {
-      LOGGER.debug("Date build failed.", e);
+      log.debug("Date build failed.", e);
     }
 
     return intervalEdtfDate;
-  }
-
-  public InstantEdtfDate getStart() {
-    return start;
-  }
-
-  public InstantEdtfDate getEnd() {
-    return end;
-  }
-
-  public String getLabel() {
-    return label;
   }
 }

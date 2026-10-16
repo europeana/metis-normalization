@@ -8,27 +8,24 @@ import eu.europeana.normalization.normalizers.RecordNormalizeAction;
 import eu.europeana.normalization.util.NormalizationException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.IOUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.function.Failable;
 
 /**
  * This class is the implementation of the {@link Normalizer} interface.
  */
+@Slf4j
 class NormalizerImpl implements Normalizer {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final RecordNormalizeAction recordNormalizer;
 
   /**
    * Constructor.
-   * 
+   *
    * @param recordNormalizer The record normalizer that is executed by this normalizer.
    */
   NormalizerImpl(RecordNormalizeAction recordNormalizer) {
@@ -44,10 +41,8 @@ class NormalizerImpl implements Normalizer {
     }
 
     // Normalize all records.
-    final List<NormalizationResult> result = new ArrayList<>(edmRecords.size());
-    for (String record : edmRecords) {
-      result.add(normalize(record));
-    }
+    final List<NormalizationResult> result =
+        Failable.stream(edmRecords).map(this::normalize).stream().toList();
     return new NormalizationBatchResult(result);
   }
 
@@ -64,7 +59,7 @@ class NormalizerImpl implements Normalizer {
       final NormalizeActionResult result = recordNormalizer.normalize(RecordWrapper.create(edmRecord));
       return NormalizationResult.createInstanceForSuccess(result.edmRecord().getAsString(), result.report());
     } catch (RuntimeException e) {
-      LOGGER.error("Unexpected runtime exception", e);
+      log.error("Unexpected runtime exception", e);
       return NormalizationResult.createInstanceForError("Unexpected problem: " + e.getMessage(),
           edmRecord);
     }

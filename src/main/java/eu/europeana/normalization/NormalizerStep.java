@@ -16,8 +16,6 @@ import eu.europeana.normalization.util.NormalizationConfigurationException;
 
 /**
  * This class lists the supported normalization steps.
- *
- * @author jochen
  */
 public enum NormalizerStep {
 

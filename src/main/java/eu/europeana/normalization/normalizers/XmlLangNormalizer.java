@@ -7,8 +7,8 @@ import eu.europeana.normalization.util.XpathQuery;
 import java.util.function.Function;
 
 /**
- * This normalizer normalizes xml:lang references in the provider proxy, provider aggregation and
- * contextual classes. It overwrites the values.
+ * This normalizer normalizes {@code xml:lang} references in the provider-proxy, provider-aggregation, and contextual classes. It
+ * overwrites the values.
  */
 public class XmlLangNormalizer extends AbstractLanguageNormalizer {
 

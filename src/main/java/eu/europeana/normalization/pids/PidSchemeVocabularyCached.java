@@ -5,7 +5,6 @@ import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImport
 import eu.europeana.normalization.pids.importer.PersistentIdentifierSchemeImporterFactory;
 import eu.europeana.normalization.pids.importer.exception.PidSchemeImportException;
 import eu.europeana.normalization.util.NormalizationConfigurationException;
-import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -15,8 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * This class loads a PID scheme vocabulary and provides functionality to match PIDs against it.
@@ -24,9 +22,9 @@ import org.slf4j.LoggerFactory;
  * The cache is thread-safe and uses a lock to prevent concurrent refreshes. If the import fails,
  * it falls back to the last known good cache if available.
  */
+@Slf4j
 public final class PidSchemeVocabularyCached {
-
-  private static final Logger LOGGER = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+  
   private static final long IMPORT_CACHE_TTL_HOUR = Duration.ofHours(24).toMillis();
   private static final String URI_SCHEME = "https://raw.githubusercontent.com/europeana/data-europeana-gateway/refs/heads/main/config/pid_directory.yaml";
   private static final int MAX_IMPORT_RETRIES = 5;
@@ -59,7 +57,7 @@ public final class PidSchemeVocabularyCached {
     // Pre-populate cache on initialization
     try {
       importPidSchemesWithRetry();
-      LOGGER.info("PID scheme vocabulary initialized successfully");
+      log.info("PID scheme vocabulary initialized successfully");
     } catch (NormalizationConfigurationException e) {
       throw new NormalizationConfigurationException("Failed to initialize PID scheme vocabulary during construction", e);
     }
@@ -113,7 +111,7 @@ public final class PidSchemeVocabularyCached {
         }
       }
     } catch (NormalizationConfigurationException e) {
-      LOGGER.error("Failed to match PID against PID scheme vocabulary", e);
+      log.error("Failed to match PID against PID scheme vocabulary", e);
     }
 
     // Compile the result.
@@ -136,7 +134,7 @@ public final class PidSchemeVocabularyCached {
         }
       }
     } catch (NormalizationConfigurationException e) {
-      LOGGER.error("Failed to match PID against PID scheme vocabulary", e);
+      log.error("Failed to match PID against PID scheme vocabulary", e);
     }
     return null;
   }
@@ -174,7 +172,7 @@ public final class PidSchemeVocabularyCached {
    */
   private void refreshCacheIfNeeded() throws NormalizationConfigurationException {
     if (!importCacheLock.tryLock()) {
-      LOGGER.debug("Another thread is refreshing the PID scheme cache");
+      log.debug("Another thread is refreshing the PID scheme cache");
       return;
     }
     try {
@@ -195,35 +193,35 @@ public final class PidSchemeVocabularyCached {
    */
   private void importPidSchemesWithRetry() throws NormalizationConfigurationException {
     NormalizationConfigurationException lastException = null;
-    LOGGER.info("Importing PID schemes");
+    log.info("Importing PID schemes");
     int attempt = 1;
     boolean importSuccessful = false;
     while (attempt <= MAX_IMPORT_RETRIES && !importSuccessful) {
       try {
-        LOGGER.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
+        log.debug("Attempting to import PID schemes (attempt {}/{})", attempt, MAX_IMPORT_RETRIES);
         schemes.set(List.copyOf(importPidSchemes()));
         importSuccessful = true;
       } catch (NormalizationConfigurationException exception) {
         lastException = exception;
         if (attempt < MAX_IMPORT_RETRIES) {
           long exponentialBackoffInMs = RETRY_BACKOFF_MS * (1L << (attempt - 1));
-          LOGGER.warn("PID scheme import failed (attempt {}), retrying in {}ms: {}",
+          log.warn("PID scheme import failed (attempt {}), retrying in {}ms: {}",
               attempt, exponentialBackoffInMs, exception.getMessage());
           try {
             Thread.sleep(exponentialBackoffInMs);
           } catch (InterruptedException interruptedException) {
-            LOGGER.error("PID scheme import interrupted ", interruptedException);
+            log.error("PID scheme import interrupted ", interruptedException);
             Thread.currentThread().interrupt();
           }
         } else {
-          LOGGER.error("PID scheme import failed after {} attempts", MAX_IMPORT_RETRIES, exception);
+          log.error("PID scheme import failed after {} attempts", MAX_IMPORT_RETRIES, exception);
         }
       }
       attempt++;
     }
 
     if (!importSuccessful) {
-      LOGGER.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
+      log.warn("All import attempts failed, falling back to stale cache (age: {} seconds)",
           Duration.ofMillis(System.currentTimeMillis() - lastSuccessfulImportTime).toSeconds());
       if (schemes.get().isEmpty()) {
         throw new NormalizationConfigurationException("Could not import PID schemes after " + MAX_IMPORT_RETRIES + " attempts",
@@ -255,7 +253,7 @@ public final class PidSchemeVocabularyCached {
       if (result.isEmpty()) {
         throw new NormalizationConfigurationException("No PID schemes were successfully imported", null);
       }
-      LOGGER.info("Successfully imported {} PID schemes", result.size());
+      log.info("Successfully imported {} PID schemes", result.size());
       lastSuccessfulImportTime = System.currentTimeMillis();
       return result;
 
@@ -277,7 +275,7 @@ public final class PidSchemeVocabularyCached {
       try {
         INSTANCE = new PidSchemeVocabularyCached();
       } catch (NormalizationConfigurationException e) {
-        LOGGER.error("Failed to initialize PidSchemeVocabularyCached", e);
+        log.error("Failed to initialize PidSchemeVocabularyCached", e);
         throw new IllegalStateException("Initialization of PidSchemeVocabularyCached failed.", e);
       }
     }

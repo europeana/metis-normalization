@@ -1,65 +1,51 @@
 package eu.europeana.normalization.dates.extraction;
 
 import java.util.Locale;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
 /**
  * Auxiliary class for converting roman numerals to decimal.
  */
 public final class RomanToNumber {
 
-  enum ROMAN {
-    I('I', 1),
-    V('V', 5),
-    X('X', 10),
-    L('L', 50),
-    C('C', 100),
-    D('D', 500),
-    M('M', 1000),
-    ;
+  @Getter
+  @AllArgsConstructor
+  enum RomanCharacter {
+    I(1),
+    V(5),
+    X(10),
+    L(50),
+    C(100),
+    D(500),
+    M(1000);
 
-    private final char text;
     private final int value;
-
-    ROMAN(char text, int value) {
-      this.text = text;
-      this.value = value;
-    }
-
-    public char getText() {
-      return text;
-    }
-
-    public int getValue() {
-      return value;
-    }
   }
 
   private RomanToNumber() {
   }
 
   /**
-   * Converts from roman numeral to a decimal.
-   * <p>
-   * The provided roman numeral is first converted to upper cased.
-   * </p>
+   * Converts a previously validated Roman numeral to its decimal value.
+   * <p>Conversion is case-insensitive. This method performs numeric conversion only; the caller must validate Roman numeral
+   * syntax before invoking it.</p>
    *
-   * @param value the roman value
+   * @param value a non-empty, syntactically valid Roman numeral
    * @return the decimal value
    */
   public static int romanToDecimal(String value) {
     int result = 0;
-    final String upperCasedValue = value.toUpperCase(Locale.US);
+    int previousValue = 0;
+    final String upperCasedValue = value.toUpperCase(Locale.ROOT);
     for (int i = 0; i < upperCasedValue.length(); i++) {
-      // Current Roman Character
-      char character = upperCasedValue.charAt(i);
-      if (i > 0 && ROMAN.valueOf(String.valueOf(character)).getValue() > ROMAN.valueOf(
-          String.valueOf(upperCasedValue.charAt(i - 1))).getValue()) {
-        result +=
-            ROMAN.valueOf(String.valueOf(character)).getValue() - 2 * ROMAN.valueOf(String.valueOf(upperCasedValue.charAt(i - 1)))
-                                                                           .getValue();
-      } else {
-        result += ROMAN.valueOf(String.valueOf(character)).getValue();
+      final int currentValue = RomanCharacter.valueOf(String.valueOf(upperCasedValue.charAt(i))).getValue();
+      result += currentValue;
+      if (currentValue > previousValue) {
+        // The previous value was already added; subtract it twice to make it subtractive.
+        result -= 2 * previousValue;
       }
+      previousValue = currentValue;
     }
 
     return result;

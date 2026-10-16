@@ -93,7 +93,7 @@ public class Language {
    */
   public Set<String> getAllLabels() {
     return Stream.of(originalNames, alternativeNames, labels).flatMap(List::stream)
-        .map(LanguageLabel::getLabel).collect(Collectors.toSet());
+                 .map(LanguageLabel::label).collect(Collectors.toSet());
   }
 
   /**
@@ -134,8 +134,8 @@ public class Language {
   public String getPrefLabel(String resultLanguageCode) {
     final LanguageLabel label =
         Stream.of(originalNames, alternativeNames, labels).flatMap(List::stream)
-            .filter(language -> StringUtils.equals(resultLanguageCode, language.getLanguage()))
+            .filter(language -> StringUtils.equals(resultLanguageCode, language.language()))
             .findFirst().orElseGet(() -> originalNames.get(0));
-    return label.getLabel();
+    return label.label();
   }
 }
